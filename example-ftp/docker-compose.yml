@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  ftp:
+    image: fauria/vsftpd:latest
+    container_name: example-ftp
+    environment:
+      - FTP_USER=ftpuser
+      - FTP_PASS=ftp_pass
+      - PASV_ADDRESS=127.0.0.1
+      - PASV_MIN_PORT=30000
+      - PASV_MAX_PORT=30009
+      - REVERSE_LOOKUP_ENABLE=NO
+      - LOG_STDOUT=true
+    ports:
+      - "21:21"
+      - "30000-30009:30000-30009"
+    volumes:
+      - ./data:/home/vsftpd
+    restart: unless-stopped
