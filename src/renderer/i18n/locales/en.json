@@ -24,6 +24,9 @@
         "externalEditor": "External editor",
         "externalEditorSystem": "System default",
         "externalEditorVscode": "Visual Studio Code",
+        "customEditorPath": "Custom editor path",
+        "customEditorPathPlaceholder": "e.g. C:\\Program Files\\MyEditor\\editor.exe",
+        "customEditorPathHint": "Full path to the executable. The file will be passed as the first argument.",
         "autoSave": "Changes are persisted automatically to SQLite."
     },
     "changelog": {
@@ -139,6 +142,7 @@
         "ftpServerPlaceholder": "Select an FTP server",
         "ftpPath": "Remote path",
         "ftpNoFiles": "No files found for this path.",
+        "selectServerFirst": "Select a server from the dropdown above to browse remote files.",
         "ftpReconnect": "Reconnect for FTP browsing",
         "retry": "Retry",
         "open": "Open",

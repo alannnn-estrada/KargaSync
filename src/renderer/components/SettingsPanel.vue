@@ -1,16 +1,6 @@
 <template>
     <section class="rounded-2xl border border-(--app-border) bg-(--app-elevated) p-5 shadow-(--app-shadow-sm)">
-        <div>
-            <p class="text-[11px] font-medium uppercase tracking-[0.18em] text-(--app-muted)">
-                {{ t('settings.section') }}
-            </p>
-            <h2 class="mt-1 text-base font-semibold text-(--app-text)">
-                {{ t('settings.title') }}
-            </h2>
-            <p class="mt-1 text-sm text-(--app-muted)">{{ t('settings.description') }}</p>
-        </div>
-
-        <div class="mt-5 space-y-5">
+        <div class="space-y-5">
             <!-- Language -->
             <div>
                 <p class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
@@ -47,7 +37,7 @@
                             : 'border-(--app-border) bg-(--app-muted-surface) text-(--app-muted) hover:border-(--app-border) hover:text-(--app-text)'"
                         @click="themeModel = opt.value">
                         <span class="block text-center text-base leading-none">{{ opt.icon }}</span>
-                        <span class="mt-1 block text-center text-xs">{{ opt.label }}</span>
+                        <span class="mt-1 block text-center text-xs">{{ t(`settings.${opt.value}`) }}</span>
                     </button>
                 </div>
             </div>
@@ -57,18 +47,33 @@
                 <p class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
                     {{ t('settings.externalEditor') }}
                 </p>
-                <div class="mt-2 flex gap-2">
+                <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                     <button
                         v-for="opt in editorOptions"
                         :key="opt.value"
                         type="button"
-                        class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition"
+                        class="rounded-lg border px-3 py-2 text-sm font-medium transition"
                         :class="externalEditorModel === opt.value
                             ? 'border-(--app-accent) bg-(--app-accent)/10 text-(--app-accent)'
                             : 'border-(--app-border) bg-(--app-muted-surface) text-(--app-muted) hover:border-(--app-border) hover:text-(--app-text)'"
                         @click="externalEditorModel = opt.value">
-                        {{ opt.label }}
+                        <span class="block text-center text-base leading-none">{{ opt.icon }}</span>
+                        <span class="mt-0.5 block truncate text-center text-xs">{{ opt.label }}</span>
                     </button>
+                </div>
+
+                <!-- Custom editor path — only show when "custom" is selected -->
+                <div v-if="externalEditorModel === 'custom'" class="mt-3">
+                    <label class="block text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
+                        {{ t('settings.customEditorPath') }}
+                    </label>
+                    <input
+                        v-model="customPathModel"
+                        type="text"
+                        class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm text-(--app-text) outline-none ring-(--app-accent) transition focus:ring-1"
+                        :placeholder="t('settings.customEditorPathPlaceholder')"
+                        @blur="saveCustomPath" />
+                    <p class="mt-1 text-xs text-(--app-muted)">{{ t('settings.customEditorPathHint') }}</p>
                 </div>
             </div>
 
@@ -95,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import type { SupportedLanguage, SupportedTheme, ExternalEditor } from '../../shared/settings';
@@ -111,16 +116,31 @@ const languageOptions: { value: SupportedLanguage; label: string }[] = [
     { value: 'en', label: 'English' },
 ];
 
-const themeOptions: { value: SupportedTheme; label: string; icon: string }[] = [
-    { value: 'system', label: 'Auto', icon: '💻' },
-    { value: 'light', label: 'Light', icon: '☀️' },
-    { value: 'dark', label: 'Dark', icon: '🌙' },
+const themeOptions: { value: SupportedTheme; icon: string }[] = [
+    { value: 'system', icon: '💻' },
+    { value: 'light', icon: '☀️' },
+    { value: 'dark', icon: '🌙' },
 ];
 
-const editorOptions: { value: ExternalEditor; label: string }[] = [
-    { value: 'system', label: 'System' },
-    { value: 'vscode', label: 'VS Code' },
+const editorOptions: { value: ExternalEditor; label: string; icon: string }[] = [
+    { value: 'system', label: 'System', icon: '🖥️' },
+    { value: 'vscode', label: 'VS Code', icon: '🔵' },
+    { value: 'cursor', label: 'Cursor', icon: '⚡' },
+    { value: 'windsurf', label: 'Windsurf', icon: '🌊' },
+    { value: 'zed', label: 'Zed', icon: '🔷' },
+    { value: 'notepad++', label: 'Notepad++', icon: '📝' },
+    { value: 'custom', label: 'Custom', icon: '🔧' },
 ];
+
+const customPathModel = ref(settingsStore.customEditorPath);
+
+watch(() => settingsStore.customEditorPath, (v) => {
+    customPathModel.value = v;
+});
+
+function saveCustomPath() {
+    void settingsStore.setCustomEditorPath(customPathModel.value);
+}
 
 const languageModel = computed<SupportedLanguage>({
     get: () => settingsStore.language,

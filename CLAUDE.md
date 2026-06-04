@@ -123,3 +123,18 @@ Project uses TypeScript `~4.5.4` (older). Avoid TS 4.6+ syntax. `satisfies` oper
 
 ### File list UL causes unbounded page growth
 File lists in FileExplorerPage had no height constraint — with many files the pane grew to thousands of pixels. Added `max-h-[min(40vh,480px)] overflow-y-auto` to both local and remote file list containers.
+
+### FileExplorer panes stacked at 1200px window width
+`xl:grid-cols-[...]` breakpoint = 1280px viewport. Default window is 1200px, so panes always stacked. Fixed by adding `lg:grid-cols-2` (1024px breakpoint) before the xl override.
+
+### SettingsPanel header duplicated with SettingsPage
+SettingsPanel.vue had its own title/description block, mirroring what SettingsPage.vue already renders as a page header. Removed the header from SettingsPanel.
+
+### SettingsPanel theme labels hardcoded English
+`themeOptions` array had `label: 'Auto'/'Light'/'Dark'` hardcoded. Template now uses `t(\`settings.\${opt.value}\`)` to pick up translated labels.
+
+### playwright screenshots grab DevTools window, not the app
+Electron auto-opens DevTools in detached mode in dev builds. `app.firstWindow()` or `app.windows()[0]` returns the DevTools window (url = devtools://...). Must filter: `app.windows().find(w => !w.url().startsWith('devtools://'))`.
+
+### playwright fails with single-instance lock when app already running
+`requestSingleInstanceLock()` returns false → app quits immediately. Launch with `--user-data-dir=<tmp>` to bypass the lock and run a second instance for testing.

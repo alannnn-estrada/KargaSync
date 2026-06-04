@@ -6,6 +6,7 @@ export interface UpdateSettingsRequestDTO {
     language?: SupportedLanguage;
     theme?: SupportedTheme;
     externalEditor?: ExternalEditor;
+    customEditorPath?: string;
 }
 
 export type UpdateSettingsResponseDTO = GetSettingsResponseDTO;

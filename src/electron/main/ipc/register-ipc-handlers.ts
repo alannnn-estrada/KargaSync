@@ -218,6 +218,7 @@ function toSettingsDto(settings: GetSettingsResponseDTO): GetSettingsResponseDTO
         language: settings.language,
         theme: settings.theme,
         externalEditor: (settings as any).externalEditor ?? 'system',
+        customEditorPath: (settings as any).customEditorPath ?? undefined,
     };
 }
 
@@ -1046,36 +1047,47 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
 
     ipcMain.handle(REMOTE_FILE_CHANNELS.openExternal, async (_event, localPath: string) => {
         const { shell } = await import('electron');
+        const { spawn } = await import('node:child_process');
 
-        // Determine preferred external editor from settings (fallback to system)
         const settings = database.settings.getSettings();
         const pref = (settings && (settings as any).externalEditor) as ExternalEditor | undefined;
+        const customPath = (settings as any).customEditorPath as string | undefined;
 
-        if (pref === 'vscode') {
+        const CLI_MAP: Record<string, string> = {
+            vscode: 'code',
+            cursor: 'cursor',
+            windsurf: 'windsurf',
+            zed: 'zed',
+            'notepad++': process.platform === 'win32' ? 'notepad++' : '',
+        };
+
+        const cliCmd = pref && pref !== 'system' && pref !== 'custom' ? CLI_MAP[pref] : undefined;
+        const execPath = pref === 'custom' ? customPath : undefined;
+
+        if (execPath) {
             try {
-                const { spawn } = await import('node:child_process');
-
-                // Try to spawn VS Code CLI. If it fails (error event), fallback to system opener.
-                const child = spawn('code', [localPath], {
-                    detached: true,
-                    stdio: 'ignore',
-                });
-
-                child.on('error', async () => {
-                    await shell.openPath(localPath);
-                });
-
+                const child = spawn(execPath, [localPath], { detached: true, stdio: 'ignore' });
+                child.on('error', async () => { await shell.openPath(localPath); });
                 try { child.unref(); } catch { /* ignore */ }
-
                 return;
-            } catch (err) {
-                // Fallback to system default opener
+            } catch {
                 await shell.openPath(localPath);
                 return;
             }
         }
 
-        // Default: open with system default application
+        if (cliCmd) {
+            try {
+                const child = spawn(cliCmd, [localPath], { detached: true, stdio: 'ignore' });
+                child.on('error', async () => { await shell.openPath(localPath); });
+                try { child.unref(); } catch { /* ignore */ }
+                return;
+            } catch {
+                await shell.openPath(localPath);
+                return;
+            }
+        }
+
         await shell.openPath(localPath);
     });
 }

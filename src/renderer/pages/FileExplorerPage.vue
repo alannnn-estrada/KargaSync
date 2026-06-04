@@ -7,7 +7,7 @@
             <p class="mt-2 max-w-3xl text-sm text-(--app-muted)">{{ t('servers.explorerDescription') }}</p>
         </header>
 
-        <div class="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
             <article
                 class="relative rounded-2xl border border-(--app-border) bg-(--app-elevated) p-4 shadow-(--app-shadow-sm)"
                 :class="activeExplorerPane === 'local' ? 'ring-2 ring-(--app-accent) ring-offset-2 ring-offset-transparent' : ''"
@@ -311,7 +311,9 @@
                         <span class="shrink-0 text-xs text-(--app-muted)">{{ formatEntryMeta(entry) }}</span>
                     </li>
                 </ul>
-                <p v-else class="mt-3 text-sm text-(--app-muted)">{{ t('servers.ftpNoFiles') }}</p>
+                <p v-else class="mt-3 rounded-lg border border-dashed border-(--app-border) bg-(--app-muted-surface) px-3 py-4 text-sm text-(--app-muted)">
+                    {{ selectedServerId ? t('servers.ftpNoFiles') : t('servers.selectServerFirst') }}
+                </p>
 
                 <div v-if="contextMenu.visible && contextMenu.scope === 'remote'"
                     class="fixed z-50 min-w-52 rounded-lg border border-(--app-border) bg-(--app-surface) p-1 shadow-(--app-shadow)"
@@ -1980,13 +1982,20 @@ function filterGenericError(error: unknown): string {
     return t('servers.operationFailed');
 }
 
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
 function formatEntryMeta(entry: ExplorerEntry): string {
     if (entry.isDirectory) {
-        return 'folder';
+        return '';
     }
 
     if (typeof entry.size === 'number' && Number.isFinite(entry.size)) {
-        return `${entry.size} B`;
+        return formatFileSize(entry.size);
     }
 
     return '';

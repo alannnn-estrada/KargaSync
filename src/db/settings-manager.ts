@@ -19,11 +19,13 @@ const readSettings = (rows: SettingsRow[]): AppSettings => {
     const language = settingsByKey.get('language') ?? DEFAULT_APP_SETTINGS.language;
     const theme = settingsByKey.get('theme') ?? DEFAULT_APP_SETTINGS.theme;
     const externalEditor = settingsByKey.get('externalEditor') ?? DEFAULT_APP_SETTINGS.externalEditor;
+    const customEditorPath = settingsByKey.get('customEditorPath');
 
     return {
         language: isSupportedLanguage(language) ? language : DEFAULT_APP_SETTINGS.language,
         theme: isSupportedTheme(theme) ? theme : DEFAULT_APP_SETTINGS.theme,
         externalEditor: isSupportedExternalEditor(externalEditor) ? externalEditor : DEFAULT_APP_SETTINGS.externalEditor,
+        customEditorPath: customEditorPath || undefined,
     };
 };
 
@@ -50,6 +52,9 @@ export function createSettingsManager(db: SqliteDatabase): SettingsManager {
         upsertSetting.run({ key: 'language', value: settings.language });
         upsertSetting.run({ key: 'theme', value: settings.theme });
         upsertSetting.run({ key: 'externalEditor', value: settings.externalEditor });
+        if (settings.customEditorPath !== undefined) {
+            upsertSetting.run({ key: 'customEditorPath', value: settings.customEditorPath });
+        }
     });
 
     const getSettings = (): AppSettings => readSettings(listSettings.all() as SettingsRow[]);
@@ -60,6 +65,7 @@ export function createSettingsManager(db: SqliteDatabase): SettingsManager {
             language: input.language ?? currentSettings.language,
             theme: input.theme ?? currentSettings.theme,
             externalEditor: input.externalEditor ?? currentSettings.externalEditor,
+            customEditorPath: input.customEditorPath !== undefined ? input.customEditorPath : currentSettings.customEditorPath,
         };
 
         persistSettings(nextSettings);

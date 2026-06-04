@@ -6,6 +6,7 @@ export interface AppSettings {
     language: SupportedLanguage;
     theme: SupportedTheme;
     externalEditor: ExternalEditor;
+    customEditorPath?: string;
 }
 
 export const SUPPORTED_LANGUAGES: readonly SupportedLanguage[] = ['en', 'es'];
@@ -17,9 +18,11 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     externalEditor: 'system',
 };
 
-export type ExternalEditor = 'vscode' | 'system';
+export type ExternalEditor = 'system' | 'vscode' | 'cursor' | 'windsurf' | 'zed' | 'notepad++' | 'custom';
 
-export const SUPPORTED_EXTERNAL_EDITORS: readonly ExternalEditor[] = ['vscode', 'system'];
+export const SUPPORTED_EXTERNAL_EDITORS: readonly ExternalEditor[] = [
+    'system', 'vscode', 'cursor', 'windsurf', 'zed', 'notepad++', 'custom',
+];
 
 export function isSupportedExternalEditor(value: string): value is ExternalEditor {
     return SUPPORTED_EXTERNAL_EDITORS.includes(value as ExternalEditor);

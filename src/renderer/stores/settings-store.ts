@@ -17,7 +17,12 @@ import {
 const SETTINGS_CACHE_KEY = 'karga-sync.settings-cache';
 
 function areSettingsEqual(left: AppSettings, right: AppSettings): boolean {
-    return left.language === right.language && left.theme === right.theme && left.externalEditor === right.externalEditor;
+    return (
+        left.language === right.language &&
+        left.theme === right.theme &&
+        left.externalEditor === right.externalEditor &&
+        (left.customEditorPath ?? '') === (right.customEditorPath ?? '')
+    );
 }
 
 function isDefaultSettings(settings: AppSettings): boolean {
@@ -50,6 +55,7 @@ function readCachedSettings(): AppSettings | null {
             language: parsed.language,
             theme: parsed.theme,
             externalEditor: parsed.externalEditor,
+            customEditorPath: typeof parsed.customEditorPath === 'string' ? parsed.customEditorPath : undefined,
         };
     } catch {
         return null;
@@ -68,6 +74,7 @@ export const useSettingsStore = defineStore('settings', () => {
     const language = ref<SupportedLanguage>(DEFAULT_APP_SETTINGS.language);
     const theme = ref<SupportedTheme>(DEFAULT_APP_SETTINGS.theme);
     const externalEditor = ref<ExternalEditor>(DEFAULT_APP_SETTINGS.externalEditor);
+    const customEditorPath = ref<string>('');
     const hasLoaded = ref(false);
 
     let saveQueue: Promise<void> = Promise.resolve();
@@ -76,6 +83,7 @@ export const useSettingsStore = defineStore('settings', () => {
         language.value = nextSettings.language;
         theme.value = nextSettings.theme;
         externalEditor.value = nextSettings.externalEditor;
+        customEditorPath.value = nextSettings.customEditorPath ?? '';
         cacheSettings(nextSettings);
     }
 
@@ -90,7 +98,6 @@ export const useSettingsStore = defineStore('settings', () => {
             const nextSettings: GetSettingsResponseDto = await getSettings();
 
             if (cachedSettings && isDefaultSettings(nextSettings) && !isDefaultSettings(cachedSettings)) {
-                // DB appears to have fallen back to defaults; keep the user's last known settings and try to heal persistence.
                 await updateSettings(cachedSettings);
                 applySettings(cachedSettings);
                 return;
@@ -108,12 +115,17 @@ export const useSettingsStore = defineStore('settings', () => {
         }
     }
 
-    function queuePersist(): Promise<void> {
-        const nextSettings: UpdateSettingsRequestDto = {
+    function buildCurrentSettings(): UpdateSettingsRequestDto {
+        return {
             language: language.value,
             theme: theme.value,
             externalEditor: externalEditor.value,
+            customEditorPath: customEditorPath.value || undefined,
         };
+    }
+
+    function queuePersist(): Promise<void> {
+        const nextSettings = buildCurrentSettings();
 
         saveQueue = saveQueue.then(async () => {
             const savedSettings = await updateSettings(nextSettings);
@@ -131,7 +143,7 @@ export const useSettingsStore = defineStore('settings', () => {
         }
 
         language.value = nextLanguage;
-        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value });
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: customEditorPath.value || undefined });
 
         if (!hasLoaded.value) {
             return Promise.resolve();
@@ -146,7 +158,7 @@ export const useSettingsStore = defineStore('settings', () => {
         }
 
         theme.value = nextTheme;
-        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value });
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: customEditorPath.value || undefined });
 
         if (!hasLoaded.value) {
             return Promise.resolve();
@@ -161,7 +173,18 @@ export const useSettingsStore = defineStore('settings', () => {
         }
 
         externalEditor.value = next;
-        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value });
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: customEditorPath.value || undefined });
+
+        if (!hasLoaded.value) {
+            return Promise.resolve();
+        }
+
+        return queuePersist();
+    }
+
+    function setCustomEditorPath(next: string): Promise<void> {
+        customEditorPath.value = next;
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: next || undefined });
 
         if (!hasLoaded.value) {
             return Promise.resolve();
@@ -174,10 +197,12 @@ export const useSettingsStore = defineStore('settings', () => {
         language,
         theme,
         externalEditor,
+        customEditorPath,
         hasLoaded,
         loadSettings,
         setLanguage,
         setTheme,
         setExternalEditor,
+        setCustomEditorPath,
     };
 });
