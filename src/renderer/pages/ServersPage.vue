@@ -7,7 +7,7 @@
             <p class="mt-2 max-w-2xl text-sm text-(--app-muted)">{{ t('servers.description') }}</p>
         </header>
 
-        <div class="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
             <article class="rounded-2xl border border-(--app-border) bg-(--app-elevated) p-5 shadow-(--app-shadow-sm)">
                 <p class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">
                     {{ isEditing ? t('servers.edit') : t('servers.create') }}

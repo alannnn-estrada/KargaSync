@@ -1,5 +1,5 @@
 <template>
-    <section class="rounded-2xl border border-(--app-border) bg-(--app-elevated) p-4 shadow-(--app-shadow-sm)">
+    <section class="rounded-2xl border border-(--app-border) bg-(--app-elevated) p-5 shadow-(--app-shadow-sm)">
         <div>
             <p class="text-[11px] font-medium uppercase tracking-[0.18em] text-(--app-muted)">
                 {{ t('settings.section') }}
@@ -7,57 +7,72 @@
             <h2 class="mt-1 text-base font-semibold text-(--app-text)">
                 {{ t('settings.title') }}
             </h2>
+            <p class="mt-1 text-sm text-(--app-muted)">{{ t('settings.description') }}</p>
         </div>
 
-        <p class="mt-2 text-sm text-(--app-muted)">
-            {{ t('settings.description') }}
-        </p>
-
-        <div class="mt-4 space-y-4">
-            <label class="block">
-                <span class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
+        <div class="mt-5 space-y-5">
+            <!-- Language -->
+            <div>
+                <p class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
                     {{ t('settings.language') }}
-                </span>
-                <select v-model="languageModel"
-                    class="mt-2 w-full rounded-xl border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1">
-                    <option value="es">
-                        {{ t('settings.spanish') }}
-                    </option>
-                    <option value="en">
-                        {{ t('settings.english') }}
-                    </option>
-                </select>
-            </label>
+                </p>
+                <div class="mt-2 flex gap-2">
+                    <button
+                        v-for="opt in languageOptions"
+                        :key="opt.value"
+                        type="button"
+                        class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition"
+                        :class="languageModel === opt.value
+                            ? 'border-(--app-accent) bg-(--app-accent)/10 text-(--app-accent)'
+                            : 'border-(--app-border) bg-(--app-muted-surface) text-(--app-muted) hover:border-(--app-border) hover:text-(--app-text)'"
+                        @click="languageModel = opt.value">
+                        {{ opt.label }}
+                    </button>
+                </div>
+            </div>
 
-            <label class="block">
-                <span class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
+            <!-- Theme -->
+            <div>
+                <p class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
                     {{ t('settings.theme') }}
-                </span>
-                <select v-model="themeModel"
-                    class="mt-2 w-full rounded-xl border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1">
-                    <option value="system">
-                        {{ t('settings.system') }}
-                    </option>
-                    <option value="light">
-                        {{ t('settings.light') }}
-                    </option>
-                    <option value="dark">
-                        {{ t('settings.dark') }}
-                    </option>
-                </select>
-            </label>
+                </p>
+                <div class="mt-2 flex gap-2">
+                    <button
+                        v-for="opt in themeOptions"
+                        :key="opt.value"
+                        type="button"
+                        class="flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition"
+                        :class="themeModel === opt.value
+                            ? 'border-(--app-accent) bg-(--app-accent)/10 text-(--app-accent)'
+                            : 'border-(--app-border) bg-(--app-muted-surface) text-(--app-muted) hover:border-(--app-border) hover:text-(--app-text)'"
+                        @click="themeModel = opt.value">
+                        <span class="block text-center text-base leading-none">{{ opt.icon }}</span>
+                        <span class="mt-1 block text-center text-xs">{{ opt.label }}</span>
+                    </button>
+                </div>
+            </div>
 
-            <label class="block">
-                <span class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
+            <!-- External editor -->
+            <div>
+                <p class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
                     {{ t('settings.externalEditor') }}
-                </span>
-                <select v-model="externalEditorModel"
-                    class="mt-2 w-full rounded-xl border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1">
-                    <option value="system">{{ t('settings.externalEditorSystem') }}</option>
-                    <option value="vscode">{{ t('settings.externalEditorVscode') }}</option>
-                </select>
-            </label>
+                </p>
+                <div class="mt-2 flex gap-2">
+                    <button
+                        v-for="opt in editorOptions"
+                        :key="opt.value"
+                        type="button"
+                        class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition"
+                        :class="externalEditorModel === opt.value
+                            ? 'border-(--app-accent) bg-(--app-accent)/10 text-(--app-accent)'
+                            : 'border-(--app-border) bg-(--app-muted-surface) text-(--app-muted) hover:border-(--app-border) hover:text-(--app-text)'"
+                        @click="externalEditorModel = opt.value">
+                        {{ opt.label }}
+                    </button>
+                </div>
+            </div>
 
+            <!-- Changelog -->
             <div class="rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-3.5">
                 <p class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
                     {{ t('changelog.title') }}
@@ -73,7 +88,7 @@
             </div>
         </div>
 
-        <p class="mt-3 text-xs text-(--app-muted)">
+        <p class="mt-4 text-xs text-(--app-muted)">
             {{ t('settings.autoSave') }}
         </p>
     </section>
@@ -90,6 +105,22 @@ import { useChangelogStore } from '../stores/changelog-store';
 const { t } = useI18n({ useScope: 'global' });
 const settingsStore = useSettingsStore();
 const changelogStore = useChangelogStore();
+
+const languageOptions: { value: SupportedLanguage; label: string }[] = [
+    { value: 'es', label: 'Español' },
+    { value: 'en', label: 'English' },
+];
+
+const themeOptions: { value: SupportedTheme; label: string; icon: string }[] = [
+    { value: 'system', label: 'Auto', icon: '💻' },
+    { value: 'light', label: 'Light', icon: '☀️' },
+    { value: 'dark', label: 'Dark', icon: '🌙' },
+];
+
+const editorOptions: { value: ExternalEditor; label: string }[] = [
+    { value: 'system', label: 'System' },
+    { value: 'vscode', label: 'VS Code' },
+];
 
 const languageModel = computed<SupportedLanguage>({
     get: () => settingsStore.language,

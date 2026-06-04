@@ -17,7 +17,7 @@
                         <button type="button"
                             class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-2 text-sm font-medium text-(--app-text) transition hover:border-(--app-accent) hover:text-(--app-accent)"
                             @click="onClose">
-                            {{ t('changelog.close') }}
+                            {{ t('actions.cancel') }}
                         </button>
                     </div>
                 </header>
@@ -28,9 +28,9 @@
                             <label class="block text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">{{
                                 t('project.selectServer') }}</label>
                             <select v-model.number="localSelectedServer"
-                                class="mt-2 w-full rounded-md border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm">
+                                class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm text-(--app-text) outline-none ring-(--app-accent) transition focus:ring-1">
                                 <option :value="null">{{ t('project.selectServerPlaceholder') }}</option>
-                                <option v-for="s in servers" :key="s.id" :value="s.id">{{ s.host }}:{{ s.port }} — {{
+                                <option v-for="s in servers" :key="s.id" :value="s.id">{{ s.name || s.host }}:{{ s.port }} — {{
                                     s.username }}</option>
                             </select>
                         </div>
@@ -39,15 +39,16 @@
                             <label class="block text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">{{
                                 t('project.remotePath') }}</label>
                             <input v-model="localRemotePath" type="text"
-                                class="mt-2 w-full rounded-md border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm"
+                                class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm text-(--app-text) outline-none ring-(--app-accent) transition focus:ring-1"
                                 placeholder="/remote/path" />
                         </div>
 
-                        <div class="flex justify-end">
-                            <button type="button" class="mr-2 rounded-md border px-3 py-2 text-sm" @click="onClose">{{
-                                t('changelog.close') }}</button>
+                        <div class="flex justify-end gap-2">
                             <button type="button"
-                                class="rounded-md bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white"
+                                class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-4 py-2 text-sm font-medium text-(--app-text) transition hover:bg-(--app-elevated)"
+                                @click="onClose">{{ t('actions.cancel') }}</button>
+                            <button type="button"
+                                class="rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                                 :disabled="!canSave" @click="onSave">{{ t('project.save') }}</button>
                         </div>
                     </div>

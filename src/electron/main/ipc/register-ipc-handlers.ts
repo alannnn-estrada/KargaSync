@@ -257,6 +257,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
             LOCAL_FILE_CHANNELS.chooseRoot,
             LOCAL_FILE_CHANNELS.list,
             LOCAL_FILE_CHANNELS.readFile,
+            LOCAL_FILE_CHANNELS.writeFile,
             LOCAL_FILE_CHANNELS.mkdir,
             LOCAL_FILE_CHANNELS.createFile,
             LOCAL_FILE_CHANNELS.rename,

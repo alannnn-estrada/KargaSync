@@ -131,7 +131,7 @@ export const useSettingsStore = defineStore('settings', () => {
         }
 
         language.value = nextLanguage;
-        cacheSettings({ language: language.value, theme: theme.value });
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value });
 
         if (!hasLoaded.value) {
             return Promise.resolve();
@@ -146,7 +146,7 @@ export const useSettingsStore = defineStore('settings', () => {
         }
 
         theme.value = nextTheme;
-        cacheSettings({ language: language.value, theme: theme.value });
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value });
 
         if (!hasLoaded.value) {
             return Promise.resolve();

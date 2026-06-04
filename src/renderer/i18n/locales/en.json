@@ -266,7 +266,8 @@
         "delete": "Delete",
         "open": "Open",
         "save": "Save",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "add": "Add"
     },
     "errors": {
         "loadProjects": "Failed to load projects.",

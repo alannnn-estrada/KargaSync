@@ -127,28 +127,108 @@ onBeforeUnmount(() => {
 <style scoped>
 .changelog-content :deep(h1),
 .changelog-content :deep(h2),
-.changelog-content :deep(h3) {
+.changelog-content :deep(h3),
+.changelog-content :deep(h4) {
     color: var(--app-text);
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: 1.25em;
+    margin-bottom: 0.5em;
 }
 
-.changelog-content :deep(p),
+.changelog-content :deep(h1) { font-size: 1.2rem; }
+.changelog-content :deep(h2) { font-size: 1.05rem; }
+.changelog-content :deep(h3) { font-size: 0.95rem; }
+
+.changelog-content :deep(p) {
+    color: var(--app-muted);
+    line-height: 1.6;
+    margin-bottom: 0.75em;
+}
+
+.changelog-content :deep(ul),
+.changelog-content :deep(ol) {
+    color: var(--app-muted);
+    padding-left: 1.25rem;
+    margin-bottom: 0.75em;
+}
+
+.changelog-content :deep(ul) { list-style-type: disc; }
+.changelog-content :deep(ol) { list-style-type: decimal; }
+
 .changelog-content :deep(li) {
     color: var(--app-muted);
+    margin-bottom: 0.25em;
+    line-height: 1.5;
 }
 
 .changelog-content :deep(code) {
     border-radius: 0.3rem;
     background: var(--app-muted-surface);
-    padding: 0.05rem 0.35rem;
+    padding: 0.1rem 0.35rem;
     color: var(--app-text);
     font-family: 'IBM Plex Mono', 'Consolas', monospace;
+    font-size: 0.85em;
+}
+
+.changelog-content :deep(pre) {
+    background: var(--app-muted-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    margin-bottom: 0.75em;
+}
+
+.changelog-content :deep(pre code) {
+    background: transparent;
+    padding: 0;
+}
+
+.changelog-content :deep(blockquote) {
+    border-left: 3px solid var(--app-accent);
+    margin-left: 0;
+    padding: 0.5rem 1rem;
+    background: var(--app-muted-surface);
+    border-radius: 0 0.375rem 0.375rem 0;
+    color: var(--app-muted);
+    font-style: italic;
+    margin-bottom: 0.75em;
 }
 
 .changelog-content :deep(a) {
     color: var(--app-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.changelog-content :deep(a:hover) {
+    opacity: 0.8;
 }
 
 .changelog-content :deep(hr) {
     border-color: var(--app-border);
+    margin: 1rem 0;
+}
+
+.changelog-content :deep(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.75em;
+    font-size: 0.85rem;
+}
+
+.changelog-content :deep(th),
+.changelog-content :deep(td) {
+    border: 1px solid var(--app-border);
+    padding: 0.375rem 0.75rem;
+    text-align: left;
+    color: var(--app-muted);
+}
+
+.changelog-content :deep(th) {
+    background: var(--app-muted-surface);
+    color: var(--app-text);
+    font-weight: 600;
 }
 </style>

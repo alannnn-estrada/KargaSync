@@ -267,8 +267,12 @@
         "collapseFolder": "Colapsar carpeta",
         "compare": "Comparar",
         "snapshot": "Instantánea",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "open": "Abrir",
         "save": "Guardar",
-        "cancel": "Cancelar"
+        "cancel": "Cancelar",
+        "add": "Agregar"
     },
     "errors": {
         "loadProjects": "No se pudieron cargar los proyectos.",

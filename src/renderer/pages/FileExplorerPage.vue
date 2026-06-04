@@ -86,23 +86,28 @@
                 <p v-else-if="localErrorMessage" class="mt-3 text-sm text-(--status-deleted-text)">{{ localErrorMessage
                 }}</p>
 
-                <ul v-if="localEntries.length > 0 || canGoLocalParent" class="mt-3 divide-y divide-(--app-border)">
+                <ul v-if="localEntries.length > 0 || canGoLocalParent" class="mt-3 max-h-[min(40vh,480px)] space-y-0.5 overflow-y-auto rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-1.5">
                     <li v-if="canGoLocalParent"
-                        class="flex items-center gap-3 py-2 cursor-pointer bg-(--app-muted-surface)"
+                        class="flex items-center gap-3 rounded-lg px-2 py-2 cursor-pointer transition-colors hover:bg-(--app-muted-surface)"
                         @click="goLocalParent">
-                        <span class="w-14 text-xs font-semibold uppercase text-(--app-muted)">📁</span>
-                        <span class="min-w-0 flex-1 truncate text-sm text-(--app-text)">..</span>
-                        <span class="text-xs text-(--app-muted)">{{ t('servers.back') }}</span>
+                        <span class="shrink-0 text-base leading-none">📁</span>
+                        <span class="min-w-0 flex-1 truncate text-sm font-medium text-(--app-muted)">..</span>
+                        <span class="shrink-0 text-xs text-(--app-muted) italic">{{ t('servers.back') }}</span>
                     </li>
-                    <li v-for="entry in localEntries" :key="entry.path" class="flex items-center gap-3 py-2"
-                        :class="[isLocalEntrySelected(entry.path) ? 'bg-(--app-muted-surface)' : '', entry.isDirectory ? 'cursor-pointer' : 'cursor-grab']"
+                    <li v-for="entry in localEntries" :key="entry.path"
+                        class="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors"
+                        :class="[
+                            isLocalEntrySelected(entry.path)
+                                ? 'bg-(--app-accent)/10 ring-1 ring-(--app-accent)/30'
+                                : 'hover:bg-(--app-muted-surface)',
+                            entry.isDirectory ? 'cursor-pointer' : 'cursor-grab'
+                        ]"
                         :draggable="!entry.isDirectory" @click="handleLocalEntryClick(entry, $event)"
                         @dblclick="handleLocalEntryDoubleClick(entry)" @dragstart="handleLocalDragStart(entry, $event)"
                         @dragend="handleLocalDragEnd" @contextmenu.prevent.stop="handleLocalContextMenu($event, entry)">
-                        <span class="w-14 text-xs font-semibold uppercase text-(--app-muted)">{{ entry.isDirectory ?
-                            '📁' : '📄' }}</span>
-                        <span class="min-w-0 flex-1 truncate text-sm text-(--app-text)">{{ entry.name }}</span>
-                        <span class="text-xs text-(--app-muted)">{{ formatEntryMeta(entry) }}</span>
+                        <span class="shrink-0 text-base leading-none">{{ entry.isDirectory ? '📁' : '📄' }}</span>
+                        <span class="min-w-0 flex-1 truncate text-sm" :class="isLocalEntrySelected(entry.path) ? 'font-medium text-(--app-text)' : 'text-(--app-text)'">{{ entry.name }}</span>
+                        <span class="shrink-0 text-xs text-(--app-muted)">{{ formatEntryMeta(entry) }}</span>
                     </li>
                 </ul>
                 <p v-else class="mt-3 text-sm text-(--app-muted)">{{ t('servers.localNoFiles') }}</p>
@@ -282,23 +287,28 @@
                 <p v-if="isRemoteLoading" class="mt-3 text-sm text-(--app-muted)">{{ t('servers.loadingRemote') }}</p>
                 <p v-else-if="remoteErrorMessage" class="mt-3 text-sm text-(--status-deleted-text)">{{
                     remoteErrorMessage }}</p>
-                <ul v-if="remoteEntries.length > 0 || canGoRemoteParent" class="mt-3 divide-y divide-(--app-border)">
+                <ul v-if="remoteEntries.length > 0 || canGoRemoteParent" class="mt-3 max-h-[min(40vh,480px)] space-y-0.5 overflow-y-auto rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-1.5">
 
                     <li v-if="canGoRemoteParent"
-                        class="flex items-center gap-3 py-2 cursor-pointer bg-(--app-muted-surface)"
+                        class="flex items-center gap-3 rounded-lg px-2 py-2 cursor-pointer transition-colors hover:bg-(--app-muted-surface)"
                         @click="goRemoteParent">
-                        <span class="w-14 text-xs font-semibold uppercase text-(--app-muted)">📁</span>
-                        <span class="min-w-0 flex-1 truncate text-sm text-(--app-text)">..</span>
-                        <span class="text-xs text-(--app-muted)">{{ t('servers.back') }}</span>
+                        <span class="shrink-0 text-base leading-none">📁</span>
+                        <span class="min-w-0 flex-1 truncate text-sm font-medium text-(--app-muted)">..</span>
+                        <span class="shrink-0 text-xs text-(--app-muted) italic">{{ t('servers.back') }}</span>
                     </li>
-                    <li v-for="entry in remoteEntries" :key="entry.path" class="flex items-center gap-3 py-2"
-                        :class="[isRemoteEntrySelected(entry.path) ? 'bg-(--app-muted-surface)' : '', entry.isDirectory ? 'cursor-pointer' : 'cursor-default']"
+                    <li v-for="entry in remoteEntries" :key="entry.path"
+                        class="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors"
+                        :class="[
+                            isRemoteEntrySelected(entry.path)
+                                ? 'bg-(--app-accent)/10 ring-1 ring-(--app-accent)/30'
+                                : 'hover:bg-(--app-muted-surface)',
+                            entry.isDirectory ? 'cursor-pointer' : 'cursor-default'
+                        ]"
                         @click="handleRemoteEntryClick(entry, $event)" @dblclick="handleRemoteEntryDoubleClick(entry)"
                         @contextmenu.prevent.stop="handleRemoteContextMenu($event, entry)">
-                        <span class="w-14 text-xs font-semibold uppercase text-(--app-muted)">{{ entry.isDirectory ?
-                            '📁' : '📄 ' }}</span>
-                        <span class="min-w-0 flex-1 truncate text-sm text-(--app-text)">{{ entry.name }}</span>
-                        <span class="text-xs text-(--app-muted)">{{ formatEntryMeta(entry) }}</span>
+                        <span class="shrink-0 text-base leading-none">{{ entry.isDirectory ? '📁' : '📄' }}</span>
+                        <span class="min-w-0 flex-1 truncate text-sm" :class="isRemoteEntrySelected(entry.path) ? 'font-medium text-(--app-text)' : 'text-(--app-text)'">{{ entry.name }}</span>
+                        <span class="shrink-0 text-xs text-(--app-muted)">{{ formatEntryMeta(entry) }}</span>
                     </li>
                 </ul>
                 <p v-else class="mt-3 text-sm text-(--app-muted)">{{ t('servers.ftpNoFiles') }}</p>
@@ -2232,10 +2242,17 @@ function closeContextMenu(): void {
 }
 
 function openContextMenu(event: MouseEvent, scope: ContextMenuScope, entry: ExplorerEntry | null = null): void {
+    const MENU_WIDTH = 224;
+    const MENU_HEIGHT_ESTIMATE = 320;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const x = Math.max(4, Math.min(event.clientX, vw - MENU_WIDTH - 4));
+    const y = Math.max(4, Math.min(event.clientY, vh - MENU_HEIGHT_ESTIMATE - 4));
+
     contextMenu.value = {
         visible: true,
-        x: event.clientX,
-        y: event.clientY,
+        x,
+        y,
         scope,
         entry,
     };

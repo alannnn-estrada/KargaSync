@@ -1,17 +1,24 @@
 <template>
     <li>
-        <div class="group flex items-center gap-2 rounded-md px-2 py-1.5 transition"
-            :class="node.type === 'file' ? fileRowClass : 'hover:bg-(--app-muted-surface)'">
+        <div class="group flex items-center gap-2 rounded-lg px-2 py-1.5 transition"
+            :class="node.type === 'file' ? fileRowClass : 'hover:bg-(--app-muted-surface) cursor-pointer'"
+            @click="node.type === 'folder' ? emit('toggle-folder', node.path) : undefined">
             <button v-if="node.type === 'folder'" type="button"
-                class="flex h-5 w-5 items-center justify-center rounded text-xs text-(--app-muted) hover:bg-(--app-muted-surface)"
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-(--app-muted)"
                 :aria-label="isExpanded ? t('actions.collapseFolder') : t('actions.expandFolder')"
-                @click="emit('toggle-folder', node.path)">
-                <span class="inline-block transform transition" :class="isExpanded ? 'rotate-90' : ''">&gt;</span>
+                @click.stop="emit('toggle-folder', node.path)">
+                <svg class="h-3.5 w-3.5 transform transition-transform duration-150"
+                    :class="isExpanded ? 'rotate-90' : ''"
+                    viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 4l4 4-4 4"/>
+                </svg>
             </button>
-            <span v-else class="inline-block h-5 w-5" />
+            <span v-else class="inline-block h-5 w-5 shrink-0" />
 
-            <span class="text-sm" :class="node.type === 'folder' ? 'text-(--app-muted)' : fileIconClass">{{ icon
-                }}</span>
+            <span class="shrink-0 text-sm leading-none" :class="node.type === 'folder' ? 'text-(--app-muted)' : fileIconClass">
+                {{ node.type === 'folder' ? (isExpanded ? '📂' : '📁') : fileStatusIcon }}
+            </span>
 
             <div class="min-w-0 flex-1">
                 <p class="truncate text-sm" :class="nameClass">{{ node.name }}</p>
@@ -68,11 +75,8 @@ const isExpanded = computed(() => {
     return props.expandedState[props.node.path] ?? false;
 });
 
-const icon = computed(() => {
-    if (props.node.type === 'folder') {
-        return isExpanded.value ? 'v' : '>';
-    }
-
+const fileStatusIcon = computed(() => {
+    if (props.node.type !== 'file') return '';
     return statusIcon(props.node.status);
 });
 

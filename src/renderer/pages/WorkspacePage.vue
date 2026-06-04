@@ -188,30 +188,30 @@
                             <div class="mt-4 space-y-3">
                                 <form class="flex gap-2" @submit.prevent="handleCreateEnvironment">
                                     <input v-model="newEnvironmentName" type="text"
-                                        class="w-full rounded-md border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm outline-none"
+                                        class="min-w-0 flex-1 rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
                                         :placeholder="t('project.newEnvironmentPlaceholder')" />
                                     <button type="submit"
-                                        class="rounded-md bg-(--app-accent) px-3 py-2 text-sm font-semibold text-white">Add</button>
+                                        class="shrink-0 rounded-lg bg-(--app-accent) px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90">{{ t('actions.add') }}</button>
                                 </form>
 
                                 <div v-if="loadingEnvironments" class="text-sm text-(--app-muted)">{{
                                     t('project.loadingEnvironments') }}</div>
 
-                                <ul v-else-if="displayedEnvironments.length" class="space-y-2">
+                                <ul v-else-if="displayedEnvironments.length" class="space-y-1.5">
                                     <li v-for="env in displayedEnvironments" :key="env.id"
-                                        class="border rounded-md p-3">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <div class="text-sm font-medium">{{ env.name }}</div>
-                                            <div class="flex items-center gap-2 min-w-0">
+                                        class="rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-3">
+                                        <div class="flex min-w-0 items-center justify-between gap-2">
+                                            <div class="min-w-0 truncate text-sm font-medium text-(--app-text)">{{ env.name }}</div>
+                                            <div class="flex shrink-0 items-center gap-1.5">
                                                 <button type="button"
-                                                    class="rounded-md border border-(--app-border) bg-(--app-muted-surface) px-3 py-1 text-sm font-medium text-(--app-text) transition hover:border-(--app-accent)"
+                                                    class="rounded-md border border-(--app-border) bg-(--app-elevated) px-2.5 py-1 text-xs font-medium text-(--app-text) transition hover:border-(--app-accent) hover:text-(--app-accent)"
                                                     @click="openBindingModal(env)">{{ t('project.configure') }}</button>
                                                 <button type="button"
-                                                    class="rounded-md border border-(--app-border) bg-(--app-muted-surface) px-3 py-1 text-sm font-medium text-(--app-muted) transition hover:border-(--status-deleted-border)"
+                                                    class="rounded-md border border-(--app-border) bg-(--app-elevated) px-2.5 py-1 text-xs font-medium text-(--app-muted) transition hover:text-(--app-text)"
                                                     @click="openEditModalForEnvironment(env)">{{ t('actions.edit')
                                                     }}</button>
                                                 <button type="button"
-                                                    class="rounded-md border border-(--app-border) bg-(--app-muted-surface) px-3 py-1 text-sm font-medium text-(--status-deleted-text) transition hover:opacity-90"
+                                                    class="rounded-md border border-(--status-deleted-border) bg-(--status-deleted-bg) px-2.5 py-1 text-xs font-medium text-(--status-deleted-text) transition hover:opacity-80"
                                                     @click="handleDeleteEnvironment(env)">{{ t('actions.delete')
                                                     }}</button>
                                             </div>
@@ -317,25 +317,25 @@
                             <div class="rounded-xl border border-(--app-border-subtle) bg-(--app-muted-surface) p-4">
                                 <dt class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
                                     t('comparison.totalFiles') }}</dt>
-                                <dd class="mt-1 text-xl font-semibold">{{
+                                <dd class="mt-1 truncate text-xl font-semibold text-(--app-text)">{{
                                     comparisonResults.summary.comparisonStats.total }}</dd>
                             </div>
                             <div class="rounded-xl border border-(--app-border-subtle) bg-(--app-muted-surface) p-4">
                                 <dt class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
                                     t('comparison.unchanged') }}</dt>
-                                <dd class="mt-1 text-xl font-semibold">{{
+                                <dd class="mt-1 truncate text-xl font-semibold text-(--app-text)">{{
                                     comparisonResults.summary.comparisonStats.unchanged }}</dd>
                             </div>
                             <div class="rounded-xl border border-(--app-border-subtle) bg-(--app-muted-surface) p-4">
                                 <dt class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
                                     t('comparison.bytesChanged') }}</dt>
-                                <dd class="mt-1 text-xl font-semibold">{{ comparisonResults.summary.bytesChanged.total
+                                <dd class="mt-1 truncate text-xl font-semibold text-(--app-text)">{{ comparisonResults.summary.bytesChanged.total
                                 }}</dd>
                             </div>
                             <div class="rounded-xl border border-(--app-border-subtle) bg-(--app-muted-surface) p-4">
                                 <dt class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
                                     t('comparison.modifiedBytes') }}</dt>
-                                <dd class="mt-1 text-xl font-semibold">{{
+                                <dd class="mt-1 truncate text-xl font-semibold text-(--app-text)">{{
                                     comparisonResults.summary.bytesChanged.modified }}</dd>
                             </div>
                         </dl>
@@ -356,16 +356,18 @@
         :selectedServer="bindingModal.selectedServer" :remotePath="bindingModal.remotePath" @close="closeBindingModal"
         @save="onBindingSave" />
 
-    <!-- Simple Edit Modal for renaming projects/environments -->
-    <div v-if="editModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div class="w-[480px] rounded-lg bg-white p-6 dark:bg-(--app-panel)">
-            <h3 class="text-lg font-semibold mb-3">{{ editModal.type === 'project' ? t('project.rename') :
+    <!-- Edit Modal for renaming projects/environments -->
+    <div v-if="editModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="editModal.visible = false">
+        <div class="w-full max-w-md rounded-2xl border border-(--app-border) bg-(--app-elevated) p-6 shadow-(--app-shadow)">
+            <h3 class="text-base font-semibold text-(--app-text)">{{ editModal.type === 'project' ? t('project.rename') :
                 t('project.renameEnvironment') }}</h3>
-            <input v-model="editModal.name" type="text" class="w-full rounded-md border px-3 py-2" />
-            <div class="mt-4 flex justify-end gap-2">
-                <button class="rounded-md px-3 py-2 bg-(--app-muted-surface)" @click="editModal.visible = false">{{
+            <input v-model="editModal.name" type="text"
+                class="mt-4 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm text-(--app-text) outline-none ring-(--app-accent) transition focus:ring-1"
+                @keyup.enter="saveEditModal" @keyup.escape="editModal.visible = false" />
+            <div class="mt-5 flex justify-end gap-2">
+                <button class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-4 py-2 text-sm font-medium text-(--app-text) transition hover:bg-(--app-elevated)" @click="editModal.visible = false">{{
                     t('actions.cancel') }}</button>
-                <button class="rounded-md px-3 py-2 bg-(--app-accent) text-white" @click="saveEditModal">{{
+                <button class="rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90" @click="saveEditModal">{{
                     t('actions.save') }}</button>
             </div>
         </div>

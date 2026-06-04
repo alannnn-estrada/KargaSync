@@ -51,7 +51,7 @@ html.dark {
   --app-border-subtle: rgba(148, 163, 184, 0.12);
   --app-text: #e5edf7;
   --app-muted: #93a4ba;
-  --app-accent: #22436b;
+  --app-accent: #3b82f6;
   --app-shadow: 0 22px 70px -34px rgba(0, 0, 0, 0.65);
   --app-shadow-sm: 0 12px 34px -30px rgba(0, 0, 0, 0.55);
   --status-added-bg: rgba(22, 101, 52, 0.16);
@@ -110,9 +110,40 @@ html.dark body {
     var(--app-bg);
 }
 
+html {
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+body {
+  overflow-x: hidden;
+}
+
 button,
 input,
 textarea,
 select {
   font: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--app-border);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--app-muted);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border) transparent;
 }

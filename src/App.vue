@@ -21,16 +21,24 @@
                             </div>
                         </div>
 
-                        <button type="button"
-                            class="hidden h-9 w-9 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:text-(--app-text) md:inline-flex"
-                            :title="isSidebarCollapsed ? t('app.expandSidebar') : t('app.collapseSidebar')"
-                            @click="toggleSidebar">
-                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path v-if="isSidebarCollapsed" d="M7 4l6 6-6 6" />
-                                <path v-else d="M13 4l-6 6 6 6" />
-                            </svg>
-                        </button>
+                        <div class="hidden items-center gap-1 md:flex">
+                            <button type="button"
+                                class="h-9 w-9 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent) inline-flex"
+                                :title="themeLabel + ' — cycle theme'"
+                                @click="cycleTheme">
+                                <span class="text-sm leading-none">{{ themeLabel }}</span>
+                            </button>
+                            <button type="button"
+                                class="h-9 w-9 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:text-(--app-text) inline-flex"
+                                :title="isSidebarCollapsed ? t('app.expandSidebar') : t('app.collapseSidebar')"
+                                @click="toggleSidebar">
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path v-if="isSidebarCollapsed" d="M7 4l6 6-6 6" />
+                                    <path v-else d="M13 4l-6 6 6 6" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <p v-if="!isSidebarCollapsed" class="mt-2 text-sm leading-6 text-(--app-muted)">{{ t('app.subtitle')
@@ -114,33 +122,29 @@
                     </button>
                 </nav>
 
-                <div v-if="!isSidebarCollapsed" class="mt-3">
+                <div v-if="!isSidebarCollapsed" class="mt-3 min-w-0">
                     <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{ t('app.projects') }}</p>
-                    <div class="mt-2 space-y-2">
-                        <div v-for="project in projectStore.projects" :key="project.id" class="rounded-lg border border-(--app-border) bg-(--app-elevated) p-2">
-                            <div class="flex items-center justify-between">
-                                <button type="button" class="text-sm font-medium text-(--app-text) truncate text-left" @click="toggleProject(project.id)">{{ project.name }}</button>
-                                <div class="flex items-center gap-2">
-                                    <button type="button" title="Toggle" class="h-7 w-7 rounded-md border border-(--app-border) bg-transparent" @click="toggleProject(project.id)">
-                                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path v-if="sidebar.isProjectExpanded(project.id)" d="M6 10h8" /><path v-else d="M10 6v8" /></svg>
-                                    </button>
-                                </div>
+                    <div class="mt-2 space-y-1.5">
+                        <div v-for="project in projectStore.projects" :key="project.id" class="min-w-0 rounded-xl border border-(--app-border) bg-(--app-elevated) p-2.5">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <button type="button" class="min-w-0 flex-1 truncate text-left text-sm font-medium text-(--app-text)" @click="toggleProject(project.id)">{{ project.name }}</button>
+                                <button type="button" :title="t('actions.expandFolder')" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-(--app-border) bg-transparent text-(--app-muted) transition hover:text-(--app-text)" @click="toggleProject(project.id)">
+                                    <svg class="h-3.5 w-3.5 transform transition-transform" :class="sidebar.isProjectExpanded(project.id) ? 'rotate-90' : ''" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>
+                                </button>
                             </div>
 
-                            <div v-if="sidebar.isProjectExpanded(project.id)" class="mt-2 space-y-2">
-                                <div v-if="projectStore.getEnvironmentsForProject(project.id).length > 0" class="space-y-1">
-                                    <div v-for="env in projectStore.getEnvironmentsForProject(project.id)" :key="env.id" class="flex items-center justify-between text-sm text-(--app-muted)">
-                                        <div>{{ env.name }}</div>
-                                        <div class="flex items-center gap-2">
-                                            <button type="button" class="text-xs rounded px-2 py-1 border" @click="selectProjectAndView(project, '/workspace')">{{ t('actions.open') }}</button>
-                                        </div>
+                            <div v-if="sidebar.isProjectExpanded(project.id)" class="mt-2 space-y-1.5">
+                                <div v-if="projectStore.getEnvironmentsForProject(project.id).length > 0" class="space-y-0.5">
+                                    <div v-for="env in projectStore.getEnvironmentsForProject(project.id)" :key="env.id" class="flex min-w-0 items-center justify-between gap-1 rounded-md px-1.5 py-1">
+                                        <span class="min-w-0 truncate text-xs text-(--app-muted)">{{ env.name }}</span>
+                                        <button type="button" class="shrink-0 rounded border border-(--app-border) bg-(--app-muted-surface) px-2 py-0.5 text-[11px] text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)" @click="selectProjectAndView(project, '/workspace')">{{ t('actions.open') }}</button>
                                     </div>
                                 </div>
-                                <div v-else class="text-xs text-(--app-muted)">{{ t('project.noEnvironments') }}</div>
+                                <p v-else class="px-1.5 text-xs text-(--app-muted)">{{ t('project.noEnvironments') }}</p>
 
-                                <div class="mt-2 flex gap-2">
-                                    <button type="button" class="text-xs rounded px-2 py-1 border" @click="onQuickCompare(project)">{{ t('actions.compare') }}</button>
-                                    <button type="button" class="text-xs rounded px-2 py-1 border" @click="onCreateSnapshot(project)">{{ t('actions.snapshot') }}</button>
+                                <div class="flex gap-1.5 pt-1">
+                                    <button type="button" class="flex-1 rounded-md border border-(--app-border) bg-(--app-muted-surface) px-2 py-1 text-[11px] font-medium text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)" @click="onQuickCompare(project)">{{ t('actions.compare') }}</button>
+                                    <button type="button" class="flex-1 rounded-md border border-(--app-border) bg-(--app-muted-surface) px-2 py-1 text-[11px] font-medium text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)" @click="onCreateSnapshot(project)">{{ t('actions.snapshot') }}</button>
                                 </div>
                             </div>
                         </div>
@@ -175,7 +179,7 @@ import { useI18n } from 'vue-i18n';
 import logoImage from './assets/logo.png';
 import { ChangelogModal } from './renderer/components';
 import { useChangelogStore } from './renderer/stores/changelog-store';
-import { useProjectComparisonStore, useSidebarStore } from './renderer/stores';
+import { useProjectComparisonStore, useSidebarStore, useSettingsStore } from './renderer/stores';
 import { listEnvironments } from './renderer/services/api';
 
 const route = useRoute();
@@ -193,7 +197,20 @@ const isResizing = ref(false);
 const changelogStore = useChangelogStore();
 const projectStore = useProjectComparisonStore();
 const sidebar = useSidebarStore();
+const settingsStore = useSettingsStore();
 const router = useRouter();
+
+function cycleTheme(): void {
+    const current = settingsStore.theme;
+    const next = current === 'system' ? 'light' : current === 'light' ? 'dark' : 'system';
+    void settingsStore.setTheme(next);
+}
+
+const themeLabel = computed(() => {
+    if (settingsStore.theme === 'dark') return '🌙';
+    if (settingsStore.theme === 'light') return '☀️';
+    return '💻';
+});
 
 // environments are stored in the project store so multiple views stay in sync
 
