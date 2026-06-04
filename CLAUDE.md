@@ -138,3 +138,6 @@ Electron auto-opens DevTools in detached mode in dev builds. `app.firstWindow()`
 
 ### playwright fails with single-instance lock when app already running
 `requestSingleInstanceLock()` returns false → app quits immediately. Launch with `--user-data-dir=<tmp>` to bypass the lock and run a second instance for testing.
+
+### Sidebar collapsed overflow — FIXED
+When `isSidebarCollapsed=true`, the old markup tried to reuse expanded layout with conditional Tailwind classes. Two bugs: (1) `px-2.5 py-2.5 md:w-11` on nav links — 32px icon + 20px padding = 52px but w-11=44px; (2) two `h-9 w-9` buttons side by side (76px) in 44px content area. Fixed by using separate `<template v-if>` blocks for expanded vs collapsed header, and `justify-center p-2 w-full` on nav items in collapsed mode.

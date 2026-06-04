@@ -149,9 +149,27 @@
                                 </div>
                                 <p v-else class="px-1.5 text-xs text-(--app-muted)">{{ t('project.noEnvironments') }}</p>
 
-                                <div class="flex gap-1.5 pt-1">
-                                    <button type="button" class="flex-1 rounded-md border border-(--app-border) bg-(--app-muted-surface) px-2 py-1 text-[11px] font-medium text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)" @click="onQuickCompare(project)">{{ t('actions.compare') }}</button>
-                                    <button type="button" class="flex-1 rounded-md border border-(--app-border) bg-(--app-muted-surface) px-2 py-1 text-[11px] font-medium text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)" @click="onCreateSnapshot(project)">{{ t('actions.snapshot') }}</button>
+                                <div class="flex gap-1 pt-1">
+                                    <button type="button"
+                                        :title="t('actions.compare')"
+                                        class="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-(--app-border) bg-(--app-muted-surface) px-2 py-1.5 text-[11px] font-medium text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                                        @click="onQuickCompare(project)">
+                                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="1" y="3" width="6" height="10" rx="1"/><rect x="9" y="3" width="6" height="10" rx="1"/>
+                                            <path d="M7 8h2"/>
+                                        </svg>
+                                        <span v-if="sidebarWidth > 260" class="truncate">{{ t('actions.compare') }}</span>
+                                    </button>
+                                    <button type="button"
+                                        :title="t('actions.snapshot')"
+                                        class="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-(--app-border) bg-(--app-muted-surface) px-2 py-1.5 text-[11px] font-medium text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                                        @click="onCreateSnapshot(project)">
+                                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M13 5.5H11l-1.5-2h-3L5 5.5H3a1 1 0 0 0-1 1V12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1Z"/>
+                                            <circle cx="8" cy="9" r="2"/>
+                                        </svg>
+                                        <span v-if="sidebarWidth > 260" class="truncate">{{ t('actions.snapshot') }}</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>

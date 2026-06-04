@@ -82,11 +82,49 @@
                     </div>
                 </div>
 
+                <!-- Sort + filter toolbar -->
+                <div class="mt-3 flex items-center gap-1.5">
+                    <input v-model="localFilter" type="text"
+                        class="min-w-0 flex-1 rounded-lg border border-(--app-border) bg-(--app-input) px-2.5 py-1.5 text-xs outline-none ring-(--app-accent) transition placeholder:text-(--app-muted) focus:ring-1"
+                        :placeholder="t('servers.filterFiles')" />
+                    <div class="flex items-center rounded-lg border border-(--app-border) bg-(--app-muted-surface) text-xs">
+                        <button type="button"
+                            class="flex items-center gap-1 px-2 py-1.5 transition hover:text-(--app-text)"
+                            :class="localSortKey === 'name' ? 'text-(--app-accent)' : 'text-(--app-muted)'"
+                            :title="t('servers.sortByName')" @click="toggleLocalSort('name')">
+                            <span>Az</span>
+                            <svg v-if="localSortKey === 'name'" class="h-2.5 w-2.5" viewBox="0 0 8 8" fill="currentColor">
+                                <path :d="localSortDir === 'asc' ? 'M4 1L7 6H1Z' : 'M4 7L1 2H7Z'"/>
+                            </svg>
+                        </button>
+                        <span class="h-4 w-px bg-(--app-border)" />
+                        <button type="button"
+                            class="flex items-center gap-1 px-2 py-1.5 transition hover:text-(--app-text)"
+                            :class="localSortKey === 'size' ? 'text-(--app-accent)' : 'text-(--app-muted)'"
+                            :title="t('servers.sortBySize')" @click="toggleLocalSort('size')">
+                            <svg class="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10V2M5 10V5M8 10V3M11 10V7"/></svg>
+                            <svg v-if="localSortKey === 'size'" class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 8 8">
+                                <path :d="localSortDir === 'asc' ? 'M4 1L7 6H1Z' : 'M4 7L1 2H7Z'"/>
+                            </svg>
+                        </button>
+                        <span class="h-4 w-px bg-(--app-border)" />
+                        <button type="button"
+                            class="flex items-center gap-1 px-2 py-1.5 transition hover:text-(--app-text)"
+                            :class="localSortKey === 'date' ? 'text-(--app-accent)' : 'text-(--app-muted)'"
+                            :title="t('servers.sortByDate')" @click="toggleLocalSort('date')">
+                            <svg class="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="10" height="9" rx="1"/><path d="M1 5h10M4 1v2M8 1v2"/></svg>
+                            <svg v-if="localSortKey === 'date'" class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 8 8">
+                                <path :d="localSortDir === 'asc' ? 'M4 1L7 6H1Z' : 'M4 7L1 2H7Z'"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
                 <p v-if="isLocalLoading" class="mt-3 text-sm text-(--app-muted)">{{ t('servers.loadingLocal') }}</p>
                 <p v-else-if="localErrorMessage" class="mt-3 text-sm text-(--status-deleted-text)">{{ localErrorMessage
                 }}</p>
 
-                <ul v-if="localEntries.length > 0 || canGoLocalParent" class="mt-3 max-h-[min(40vh,480px)] space-y-0.5 overflow-y-auto rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-1.5">
+                <ul v-if="displayedLocalEntries.length > 0 || canGoLocalParent" class="mt-2 max-h-[min(40vh,480px)] space-y-0.5 overflow-y-auto rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-1.5">
                     <li v-if="canGoLocalParent"
                         class="flex items-center gap-3 rounded-lg px-2 py-2 cursor-pointer transition-colors hover:bg-(--app-muted-surface)"
                         @click="goLocalParent">
@@ -94,7 +132,7 @@
                         <span class="min-w-0 flex-1 truncate text-sm font-medium text-(--app-muted)">..</span>
                         <span class="shrink-0 text-xs text-(--app-muted) italic">{{ t('servers.back') }}</span>
                     </li>
-                    <li v-for="entry in localEntries" :key="entry.path"
+                    <li v-for="entry in displayedLocalEntries" :key="entry.path"
                         class="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors"
                         :class="[
                             isLocalEntrySelected(entry.path)
@@ -110,6 +148,9 @@
                         <span class="shrink-0 text-xs text-(--app-muted)">{{ formatEntryMeta(entry) }}</span>
                     </li>
                 </ul>
+                <p v-else-if="localFilter && localEntries.length > 0" class="mt-2 rounded-lg border border-dashed border-(--app-border) px-3 py-3 text-xs text-(--app-muted)">
+                    {{ t('servers.noMatchingFiles') }}
+                </p>
                 <p v-else class="mt-3 text-sm text-(--app-muted)">{{ t('servers.localNoFiles') }}</p>
 
                 <div v-if="contextMenu.visible && contextMenu.scope === 'local'"
@@ -284,11 +325,48 @@
                     </button>
                 </div>
 
-                <p v-if="isRemoteLoading" class="mt-3 text-sm text-(--app-muted)">{{ t('servers.loadingRemote') }}</p>
-                <p v-else-if="remoteErrorMessage" class="mt-3 text-sm text-(--status-deleted-text)">{{
-                    remoteErrorMessage }}</p>
-                <ul v-if="remoteEntries.length > 0 || canGoRemoteParent" class="mt-3 max-h-[min(40vh,480px)] space-y-0.5 overflow-y-auto rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-1.5">
+                <!-- Remote sort + filter toolbar -->
+                <div class="mt-3 flex items-center gap-1.5">
+                    <input v-model="remoteFilter" type="text"
+                        class="min-w-0 flex-1 rounded-lg border border-(--app-border) bg-(--app-input) px-2.5 py-1.5 text-xs outline-none ring-(--app-accent) transition placeholder:text-(--app-muted) focus:ring-1"
+                        :placeholder="t('servers.filterFiles')" :disabled="!selectedServerId" />
+                    <div class="flex items-center rounded-lg border border-(--app-border) bg-(--app-muted-surface) text-xs">
+                        <button type="button"
+                            class="flex items-center gap-1 px-2 py-1.5 transition hover:text-(--app-text)"
+                            :class="remoteSortKey === 'name' ? 'text-(--app-accent)' : 'text-(--app-muted)'"
+                            :title="t('servers.sortByName')" @click="toggleRemoteSort('name')">
+                            <span>Az</span>
+                            <svg v-if="remoteSortKey === 'name'" class="h-2.5 w-2.5" viewBox="0 0 8 8" fill="currentColor">
+                                <path :d="remoteSortDir === 'asc' ? 'M4 1L7 6H1Z' : 'M4 7L1 2H7Z'"/>
+                            </svg>
+                        </button>
+                        <span class="h-4 w-px bg-(--app-border)" />
+                        <button type="button"
+                            class="flex items-center gap-1 px-2 py-1.5 transition hover:text-(--app-text)"
+                            :class="remoteSortKey === 'size' ? 'text-(--app-accent)' : 'text-(--app-muted)'"
+                            :title="t('servers.sortBySize')" @click="toggleRemoteSort('size')">
+                            <svg class="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10V2M5 10V5M8 10V3M11 10V7"/></svg>
+                            <svg v-if="remoteSortKey === 'size'" class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 8 8">
+                                <path :d="remoteSortDir === 'asc' ? 'M4 1L7 6H1Z' : 'M4 7L1 2H7Z'"/>
+                            </svg>
+                        </button>
+                        <span class="h-4 w-px bg-(--app-border)" />
+                        <button type="button"
+                            class="flex items-center gap-1 px-2 py-1.5 transition hover:text-(--app-text)"
+                            :class="remoteSortKey === 'date' ? 'text-(--app-accent)' : 'text-(--app-muted)'"
+                            :title="t('servers.sortByDate')" @click="toggleRemoteSort('date')">
+                            <svg class="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="10" height="9" rx="1"/><path d="M1 5h10M4 1v2M8 1v2"/></svg>
+                            <svg v-if="remoteSortKey === 'date'" class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 8 8">
+                                <path :d="remoteSortDir === 'asc' ? 'M4 1L7 6H1Z' : 'M4 7L1 2H7Z'"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
 
+                <p v-if="isRemoteLoading" class="mt-2 text-sm text-(--app-muted)">{{ t('servers.loadingRemote') }}</p>
+                <p v-else-if="remoteErrorMessage" class="mt-2 text-sm text-(--status-deleted-text)">{{ remoteErrorMessage }}</p>
+
+                <ul v-if="displayedRemoteEntries.length > 0 || canGoRemoteParent" class="mt-2 max-h-[min(40vh,480px)] space-y-0.5 overflow-y-auto rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-1.5">
                     <li v-if="canGoRemoteParent"
                         class="flex items-center gap-3 rounded-lg px-2 py-2 cursor-pointer transition-colors hover:bg-(--app-muted-surface)"
                         @click="goRemoteParent">
@@ -296,7 +374,7 @@
                         <span class="min-w-0 flex-1 truncate text-sm font-medium text-(--app-muted)">..</span>
                         <span class="shrink-0 text-xs text-(--app-muted) italic">{{ t('servers.back') }}</span>
                     </li>
-                    <li v-for="entry in remoteEntries" :key="entry.path"
+                    <li v-for="entry in displayedRemoteEntries" :key="entry.path"
                         class="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors"
                         :class="[
                             isRemoteEntrySelected(entry.path)
@@ -311,7 +389,10 @@
                         <span class="shrink-0 text-xs text-(--app-muted)">{{ formatEntryMeta(entry) }}</span>
                     </li>
                 </ul>
-                <p v-else class="mt-3 rounded-lg border border-dashed border-(--app-border) bg-(--app-muted-surface) px-3 py-4 text-sm text-(--app-muted)">
+                <p v-else-if="remoteFilter && remoteEntries.length > 0" class="mt-2 rounded-lg border border-dashed border-(--app-border) px-3 py-3 text-xs text-(--app-muted)">
+                    {{ t('servers.noMatchingFiles') }}
+                </p>
+                <p v-else class="mt-2 rounded-lg border border-dashed border-(--app-border) bg-(--app-muted-surface) px-3 py-4 text-sm text-(--app-muted)">
                     {{ selectedServerId ? t('servers.ftpNoFiles') : t('servers.selectServerFirst') }}
                 </p>
 
@@ -661,6 +742,16 @@ const transferQueue = ref<TransferQueueItem[]>([]);
 const transferLog = ref<TransferLogEntry[]>([]);
 const conflictRule = ref<ConflictRule>('ask');
 const conflictModalVisible = ref(false);
+
+// Sort + filter state
+type SortKey = 'name' | 'size' | 'date';
+type SortDir = 'asc' | 'desc';
+const localSortKey = ref<SortKey>('name');
+const localSortDir = ref<SortDir>('asc');
+const remoteSortKey = ref<SortKey>('name');
+const remoteSortDir = ref<SortDir>('asc');
+const localFilter = ref('');
+const remoteFilter = ref('');
 const conflictModalApplyToAll = ref(false);
 const conflictModalSourceEntry = ref<ExplorerEntry | null>(null);
 const conflictModalTargetEntry = ref<ExplorerEntry | null>(null);
@@ -711,6 +802,52 @@ const canUploadSelectedLocalFile = computed(() => Boolean(selectedLocalFile.valu
 const canUploadSelectedRemoteFile = computed(() => Boolean(selectedRemoteFile.value));
 const canGoLocalParent = computed(() => Boolean(localPath.value && getLocalParentPath(localPath.value) !== localPath.value));
 const canGoRemoteParent = computed(() => remotePath.value !== '/');
+
+function sortAndFilter(entries: ExplorerEntry[], filter: string, sortKey: SortKey, sortDir: SortDir): ExplorerEntry[] {
+    const query = filter.trim().toLowerCase();
+    const filtered = query ? entries.filter(e => e.name.toLowerCase().includes(query)) : entries;
+    const dirs = filtered.filter(e => e.isDirectory);
+    const files = filtered.filter(e => !e.isDirectory);
+
+    function compare(a: ExplorerEntry, b: ExplorerEntry): number {
+        let cmp = 0;
+        if (sortKey === 'name') {
+            cmp = a.name.localeCompare(b.name);
+        } else if (sortKey === 'size') {
+            cmp = (a.size ?? 0) - (b.size ?? 0);
+        } else if (sortKey === 'date') {
+            const at = a.modifiedAt ? new Date(a.modifiedAt).getTime() : 0;
+            const bt = b.modifiedAt ? new Date(b.modifiedAt).getTime() : 0;
+            cmp = at - bt;
+        }
+        return sortDir === 'asc' ? cmp : -cmp;
+    }
+
+    return [...dirs.sort(compare), ...files.sort(compare)];
+}
+
+const displayedLocalEntries = computed(() =>
+    sortAndFilter(localEntries.value, localFilter.value, localSortKey.value, localSortDir.value));
+const displayedRemoteEntries = computed(() =>
+    sortAndFilter(remoteEntries.value, remoteFilter.value, remoteSortKey.value, remoteSortDir.value));
+
+function toggleLocalSort(key: SortKey) {
+    if (localSortKey.value === key) {
+        localSortDir.value = localSortDir.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        localSortKey.value = key;
+        localSortDir.value = 'asc';
+    }
+}
+
+function toggleRemoteSort(key: SortKey) {
+    if (remoteSortKey.value === key) {
+        remoteSortDir.value = remoteSortDir.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        remoteSortKey.value = key;
+        remoteSortDir.value = 'asc';
+    }
+}
 
 function createTransferId(): string {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1617,6 +1754,18 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
         return;
     }
 
+    // F5 or Ctrl+R → refresh active pane
+    const isRefresh = event.key === 'F5' || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'r');
+    if (isRefresh) {
+        event.preventDefault();
+        if (activeExplorerPane.value === 'local') {
+            void loadLocalFiles();
+        } else {
+            void loadRemoteFiles();
+        }
+        return;
+    }
+
     const key = event.key.toLowerCase();
     const isClipboardShortcut = event.ctrlKey || event.metaKey;
 
@@ -1989,16 +2138,29 @@ function formatFileSize(bytes: number): string {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
+function formatRelativeDate(iso: string | null | undefined): string {
+    if (!iso) return '';
+    const ms = Date.parse(iso);
+    if (Number.isNaN(ms)) return '';
+    const diff = Date.now() - ms;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'ahora';
+    if (mins < 60) return `${mins}m`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d`;
+    const d = new Date(ms);
+    return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear().toString().slice(2)}`;
+}
+
 function formatEntryMeta(entry: ExplorerEntry): string {
-    if (entry.isDirectory) {
-        return '';
-    }
-
-    if (typeof entry.size === 'number' && Number.isFinite(entry.size)) {
-        return formatFileSize(entry.size);
-    }
-
-    return '';
+    if (entry.isDirectory) return '';
+    const size = typeof entry.size === 'number' && Number.isFinite(entry.size)
+        ? formatFileSize(entry.size) : '';
+    const date = formatRelativeDate(entry.modifiedAt);
+    if (size && date) return `${size} · ${date}`;
+    return size || date;
 }
 
 function normalizeTrailingSeparators(value: string): string {
@@ -2571,6 +2733,8 @@ async function syncRemoteEditSession(session: RemoteEditSession): Promise<void> 
         }
 
         session.uploadInFlight = true;
+        const fileName = getBaseName(session.remotePath);
+        pushTransferLog(`${t('servers.autoSyncUploading')}: ${fileName}`, 'info');
 
         await remoteFilesService.uploadRemoteFile(
             session.serverId,
@@ -2580,12 +2744,14 @@ async function syncRemoteEditSession(session: RemoteEditSession): Promise<void> 
         );
 
         session.lastUploadedBase64 = currentContentBase64;
+        pushTransferLog(`✓ ${t('servers.autoSyncSaved')}: ${fileName}`, 'success');
 
         if (!isRemoteLoading.value && selectedServerId.value === session.serverId) {
             await loadRemoteFiles();
         }
     } catch (error) {
-        remoteErrorMessage.value = filterGenericError(error);
+        const fileName = getBaseName(session.remotePath);
+        pushTransferLog(`${t('servers.autoSyncFailed')}: ${fileName} — ${filterGenericError(error)}`, 'error');
     } finally {
         session.uploadInFlight = false;
     }
