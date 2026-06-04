@@ -52,12 +52,20 @@
                                     <span class="truncate text-sm font-medium">{{ project.name }}</span>
                                 </button>
                                 <div class="flex gap-1">
-                                    <button type="button" title="{{ t('actions.edit') }}"
-                                        class="h-8 w-8 rounded-md border bg-(--app-muted-surface) text-(--app-muted)"
-                                        @click="openEditModalForProject(project)">✎</button>
-                                    <button type="button" title="{{ t('actions.delete') }}"
-                                        class="h-8 w-8 rounded-md border bg-(--app-muted-surface) text-(--status-deleted-text)"
-                                        @click="handleDeleteProject(project)">🗑</button>
+                                    <button type="button" :title="t('actions.edit')"
+                                        class="flex h-8 w-8 items-center justify-center rounded-md border border-(--app-border) bg-(--app-muted-surface) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                                        @click="openEditModalForProject(project)">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M11.5 2.5a1.41 1.41 0 0 1 2 2L5 13H2v-3L11.5 2.5Z"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" :title="t('actions.delete')"
+                                        class="flex h-8 w-8 items-center justify-center rounded-md border border-(--app-border) bg-(--app-muted-surface) text-(--app-muted) transition hover:border-(--status-deleted-border) hover:text-(--status-deleted-text)"
+                                        @click="handleDeleteProject(project)">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="2 4 14 4"/><path d="M5 4V2h6v2"/><path d="M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/>
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
                         </li>

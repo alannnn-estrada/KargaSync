@@ -2,127 +2,134 @@
     <div class="app-shell min-h-screen text-(--app-text)" :class="{ 'is-collapsed': isSidebarCollapsed }"
         :style="layoutStyle">
         <aside
-            class="relative border-b border-(--app-border) bg-(--app-sidebar) md:sticky md:top-0 md:min-h-screen md:border-b-0 md:border-r">
-            <div class="flex h-full flex-col gap-5 p-4 md:p-5">
-                <div>
-                    <div class="flex items-start justify-between gap-3"
-                        :class="isSidebarCollapsed ? 'md:flex-col md:items-center' : ''">
-                        <div class="flex items-center gap-3" :class="isSidebarCollapsed ? 'md:flex-col' : ''">
+            class="relative border-b border-(--app-border) bg-(--app-sidebar) md:sticky md:top-0 md:min-h-screen md:border-b-0 md:border-r"
+            :class="isSidebarCollapsed ? 'md:w-[5.25rem]' : ''">
+            <div class="flex h-full flex-col gap-4 p-3 md:p-4"
+                :class="isSidebarCollapsed ? 'md:items-center md:gap-3' : ''">
+
+                <!-- Header: logo + brand + controls -->
+                <div :class="isSidebarCollapsed ? 'flex flex-col items-center gap-2 w-full' : ''">
+                    <!-- Expanded: row with logo+name on left, controls on right -->
+                    <div v-if="!isSidebarCollapsed" class="flex items-start justify-between gap-2">
+                        <div class="flex min-w-0 items-center gap-3">
                             <button type="button"
-                                class="flex h-10 w-10 items-center justify-center rounded-xl border border-(--app-accent) bg-(--app-accent) text-white transition hover:opacity-90"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-(--app-accent) bg-(--app-accent) text-white transition hover:opacity-90"
                                 aria-label="Toggle app menu" @click="toggleAppMenu">
                                 <img :src="logoImage" alt="KargaSync" class="h-6 w-6 object-contain" />
                             </button>
-
-                            <div v-if="!isSidebarCollapsed">
-                                <p class="text-[11px] font-medium uppercase tracking-[0.18em] text-(--app-muted)">{{
-                                    t('app.title') }}</p>
-                                <h1 class="mt-1 text-xl font-semibold tracking-tight">{{ t('app.brand') }}</h1>
+                            <div class="min-w-0">
+                                <p class="text-[11px] font-medium uppercase tracking-[0.18em] text-(--app-muted)">{{ t('app.title') }}</p>
+                                <h1 class="mt-0.5 truncate text-xl font-semibold tracking-tight">{{ t('app.brand') }}</h1>
                             </div>
                         </div>
-
-                        <div class="hidden items-center gap-1 md:flex">
+                        <div class="hidden shrink-0 items-center gap-1 md:flex">
                             <button type="button"
-                                class="h-9 w-9 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent) inline-flex"
-                                :title="themeLabel + ' — cycle theme'"
-                                @click="cycleTheme">
+                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                                :title="themeLabel + ' — cycle theme'" @click="cycleTheme">
                                 <span class="text-sm leading-none">{{ themeLabel }}</span>
                             </button>
                             <button type="button"
-                                class="h-9 w-9 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:text-(--app-text) inline-flex"
-                                :title="isSidebarCollapsed ? t('app.expandSidebar') : t('app.collapseSidebar')"
-                                @click="toggleSidebar">
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path v-if="isSidebarCollapsed" d="M7 4l6 6-6 6" />
-                                    <path v-else d="M13 4l-6 6 6 6" />
+                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:text-(--app-text)"
+                                :title="t('app.collapseSidebar')" @click="toggleSidebar">
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M13 4l-6 6 6 6" />
                                 </svg>
                             </button>
                         </div>
                     </div>
 
-                    <p v-if="!isSidebarCollapsed" class="mt-2 text-sm leading-6 text-(--app-muted)">{{ t('app.subtitle')
-                    }}</p>
+                    <!-- Collapsed: logo on top, expand button below -->
+                    <template v-if="isSidebarCollapsed">
+                        <button type="button"
+                            class="flex h-10 w-10 items-center justify-center rounded-xl border border-(--app-accent) bg-(--app-accent) text-white transition hover:opacity-90"
+                            aria-label="Toggle app menu" @click="toggleAppMenu">
+                            <img :src="logoImage" alt="KargaSync" class="h-6 w-6 object-contain" />
+                        </button>
+                        <button type="button"
+                            class="hidden h-8 w-8 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:text-(--app-text) md:inline-flex"
+                            :title="t('app.expandSidebar')" @click="toggleSidebar">
+                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M7 4l6 6-6 6" />
+                            </svg>
+                        </button>
+                    </template>
+
+                    <p v-if="!isSidebarCollapsed" class="mt-1.5 text-sm leading-6 text-(--app-muted)">{{ t('app.subtitle') }}</p>
                 </div>
 
-                <nav class="space-y-2" :class="isSidebarCollapsed ? 'md:space-y-1.5' : ''">
+                <!-- Nav links -->
+                <nav class="w-full space-y-1">
                     <RouterLink v-for="item in navigation" :key="item.to" :to="item.to"
-                        :title="isSidebarCollapsed ? item.label : ''" :aria-label="item.label"
-                        class="group flex items-center gap-3 rounded-xl border text-sm font-medium transition" :class="[
-                            isSidebarCollapsed ? 'justify-center px-2.5 py-2.5 md:mx-auto md:w-11' : 'px-4 py-3',
+                        :title="isSidebarCollapsed ? item.label : ''"
+                        :aria-label="item.label"
+                        class="flex w-full items-center rounded-xl border text-sm font-medium transition"
+                        :class="[
+                            isSidebarCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5',
                             route.path === item.to
                                 ? 'border-(--app-accent) bg-(--app-elevated) text-(--app-text) shadow-(--app-shadow-sm)'
                                 : 'border-transparent bg-transparent text-(--app-muted) hover:border-(--app-border) hover:bg-(--app-elevated) hover:text-(--app-text)',
                         ]">
-                        <span class="flex h-8 w-8 items-center justify-center rounded-lg border" :class="route.path === item.to
-                            ? 'border-(--app-accent) bg-(--app-accent) text-white'
-                            : 'border-(--app-border) bg-(--app-muted-surface) text-(--app-muted)'">
-                            <svg v-if="item.icon === 'workspace'" class="h-4 w-4" viewBox="0 0 20 20" fill="none"
-                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-                                aria-hidden="true">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border"
+                            :class="route.path === item.to
+                                ? 'border-(--app-accent) bg-(--app-accent) text-white'
+                                : 'border-(--app-border) bg-(--app-muted-surface) text-(--app-muted)'">
+                            <svg v-if="item.icon === 'workspace'" class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="3.5" y="3.5" width="5.5" height="5.5" rx="1" />
                                 <rect x="11" y="3.5" width="5.5" height="5.5" rx="1" />
                                 <rect x="3.5" y="11" width="5.5" height="5.5" rx="1" />
                                 <rect x="11" y="11" width="5.5" height="5.5" rx="1" />
                             </svg>
-
-                            <svg v-else-if="item.icon === 'servers'" class="h-4 w-4" viewBox="0 0 20 20" fill="none"
-                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-                                aria-hidden="true">
+                            <svg v-else-if="item.icon === 'servers'" class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="3" y="4" width="14" height="4.5" rx="1.2" />
                                 <rect x="3" y="11.5" width="14" height="4.5" rx="1.2" />
                                 <circle cx="6" cy="6.2" r="0.8" fill="currentColor" stroke="none" />
                                 <circle cx="6" cy="13.7" r="0.8" fill="currentColor" stroke="none" />
                             </svg>
-
-                            <svg v-else-if="item.icon === 'explorer'" class="h-4 w-4" viewBox="0 0 20 20" fill="none"
-                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-                                aria-hidden="true">
+                            <svg v-else-if="item.icon === 'explorer'" class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M3.5 6.5h5l1.2 1.6H16a1 1 0 0 1 1 1v6.4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7.5a1 1 0 0 1 .5-1Z" />
                             </svg>
-
-                            <svg v-else class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <svg v-else class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="10" cy="10" r="2.3" />
-                                <path
-                                    d="M16.2 10a6.2 6.2 0 0 0-.08-.93l1.76-1.37-1.5-2.6-2.14.67a6 6 0 0 0-1.6-.93L12.2 2.6H9.2l-.45 2.24c-.56.2-1.09.5-1.57.87L5.04 5 3.5 7.62l1.76 1.34a6.6 6.6 0 0 0 0 2.03L3.5 12.38 5.04 15l2.14-.7c.48.38 1.01.68 1.57.88l.45 2.22h3l.45-2.22c.56-.2 1.09-.5 1.57-.88l2.14.7 1.54-2.62-1.76-1.39c.05-.33.08-.66.08-.99Z" />
+                                <path d="M16.2 10a6.2 6.2 0 0 0-.08-.93l1.76-1.37-1.5-2.6-2.14.67a6 6 0 0 0-1.6-.93L12.2 2.6H9.2l-.45 2.24c-.56.2-1.09.5-1.57.87L5.04 5 3.5 7.62l1.76 1.34a6.6 6.6 0 0 0 0 2.03L3.5 12.38 5.04 15l2.14-.7c.48.38 1.01.68 1.57.88l.45 2.22h3l.45-2.22c.56-.2 1.09-.5 1.57-.88l2.14.7 1.54-2.62-1.76-1.39c.05-.33.08-.66.08-.99Z" />
                             </svg>
                         </span>
-
-                        <span v-if="!isSidebarCollapsed">{{ item.label }}</span>
+                        <span v-if="!isSidebarCollapsed" class="min-w-0 truncate">{{ item.label }}</span>
                     </RouterLink>
 
-                    <button type="button" :title="isSidebarCollapsed ? t('changelog.menuLabel') : ''"
+                    <!-- Changelog button -->
+                    <button type="button"
+                        :title="isSidebarCollapsed ? t('changelog.menuLabel') : ''"
                         :aria-label="t('changelog.menuLabel')"
-                        class="group relative flex w-full items-center gap-3 rounded-xl border text-sm font-medium transition"
+                        class="relative flex w-full items-center rounded-xl border text-sm font-medium transition"
                         :class="[
-                            isSidebarCollapsed ? 'justify-center px-2.5 py-2.5 md:mx-auto md:w-11' : 'px-4 py-3',
+                            isSidebarCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5',
                             changelogStore.isModalOpen
                                 ? 'border-(--app-accent) bg-(--app-elevated) text-(--app-text) shadow-(--app-shadow-sm)'
                                 : 'border-transparent bg-transparent text-(--app-muted) hover:border-(--app-border) hover:bg-(--app-elevated) hover:text-(--app-text)',
-                        ]" @click="openChangelog">
-                        <span class="flex h-8 w-8 items-center justify-center rounded-lg border" :class="changelogStore.isModalOpen
-                            ? 'border-(--app-accent) bg-(--app-accent) text-white'
-                            : 'border-(--app-border) bg-(--app-muted-surface) text-(--app-muted)'">
-                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M4 4.5h12" />
-                                <path d="M4 8.5h12" />
-                                <path d="M4 12.5h8" />
-                                <path d="M4 16.5h6" />
+                        ]"
+                        @click="openChangelog">
+                        <span class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border"
+                            :class="changelogStore.isModalOpen
+                                ? 'border-(--app-accent) bg-(--app-accent) text-white'
+                                : 'border-(--app-border) bg-(--app-muted-surface) text-(--app-muted)'">
+                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 4.5h12" /><path d="M4 8.5h12" /><path d="M4 12.5h8" /><path d="M4 16.5h6" />
                             </svg>
+                            <!-- Badge: on the icon corner when collapsed -->
+                            <span v-if="changelogStore.hasUnreadLatest && isSidebarCollapsed"
+                                class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-(--app-sidebar) bg-(--status-added-text)" />
                         </span>
-
-                        <span v-if="!isSidebarCollapsed">{{ t('changelog.menuLabel') }}</span>
-
-                        <span v-if="changelogStore.hasUnreadLatest"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-(--status-added-border) bg-(--status-added-bg) px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--status-added-text)">
+                        <span v-if="!isSidebarCollapsed" class="min-w-0 flex-1 truncate text-left">{{ t('changelog.menuLabel') }}</span>
+                        <!-- Badge: inline text when expanded -->
+                        <span v-if="changelogStore.hasUnreadLatest && !isSidebarCollapsed"
+                            class="ml-auto shrink-0 rounded-full border border-(--status-added-border) bg-(--status-added-bg) px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--status-added-text)">
                             {{ t('changelog.newBadge') }}
                         </span>
                     </button>
                 </nav>
 
-                <div v-if="!isSidebarCollapsed" class="mt-3 min-w-0">
+                <!-- Projects list (expanded only) -->
+                <div v-if="!isSidebarCollapsed" class="min-w-0 flex-1 overflow-auto">
                     <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{ t('app.projects') }}</p>
                     <div class="mt-2 space-y-1.5">
                         <div v-for="project in projectStore.projects" :key="project.id" class="min-w-0 rounded-xl border border-(--app-border) bg-(--app-elevated) p-2.5">
@@ -151,14 +158,22 @@
                     </div>
                 </div>
 
+                <!-- Bottom hint (expanded only) -->
                 <div v-if="!isSidebarCollapsed"
-                    class="mt-auto rounded-2xl border border-(--app-border) bg-(--app-elevated) p-3 shadow-(--app-shadow-sm)">
-                    <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
-                        t('settings.section') }}</p>
+                    class="mt-auto shrink-0 rounded-2xl border border-(--app-border) bg-(--app-elevated) p-3 shadow-(--app-shadow-sm)">
+                    <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{ t('settings.section') }}</p>
                     <p class="mt-1 text-xs leading-5 text-(--app-muted)">{{ t('app.sidebarHint') }}</p>
                 </div>
+
+                <!-- Theme toggle at bottom when collapsed -->
+                <button v-if="isSidebarCollapsed" type="button"
+                    class="mt-auto hidden h-8 w-8 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent) md:inline-flex"
+                    :title="themeLabel + ' — cycle theme'" @click="cycleTheme">
+                    <span class="text-sm leading-none">{{ themeLabel }}</span>
+                </button>
             </div>
 
+            <!-- Resize handle (expanded only) -->
             <button v-if="!isSidebarCollapsed" type="button"
                 class="absolute -right-1.5 top-0 hidden h-full w-3 cursor-col-resize border-l border-r border-transparent bg-transparent transition hover:border-(--app-border) md:block"
                 :title="t('app.resizeSidebar')" @mousedown="beginResize" />
