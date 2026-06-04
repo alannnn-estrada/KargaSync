@@ -11,8 +11,7 @@
             <article
                 class="relative rounded-2xl border border-(--app-border) bg-(--app-elevated) p-4 shadow-(--app-shadow-sm)"
                 :class="activeExplorerPane === 'local' ? 'ring-2 ring-(--app-accent) ring-offset-2 ring-offset-transparent' : ''"
-                @click="setActiveExplorerPane('local')"
-                @contextmenu.prevent="openContextMenu($event, 'local')">
+                @click="setActiveExplorerPane('local')" @contextmenu.prevent="openContextMenu($event, 'local')">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
@@ -53,7 +52,8 @@
                         </span>
                         <span v-else-if="remoteClipboard" class="rounded-full px-2.5 py-1 text-xs font-semibold"
                             :class="remoteClipboard.mode === 'cut' ? 'bg-(--status-deleted-bg) text-(--status-deleted-text)' : 'bg-(--status-modified-soft) text-(--status-modified-text)'">
-                            {{ remoteClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy') }}
+                            {{ remoteClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy')
+                            }}
                             {{ remoteClipboard.entries.length }}
                         </span>
                         <button type="button"
@@ -84,7 +84,7 @@
 
                 <p v-if="isLocalLoading" class="mt-3 text-sm text-(--app-muted)">{{ t('servers.loadingLocal') }}</p>
                 <p v-else-if="localErrorMessage" class="mt-3 text-sm text-(--status-deleted-text)">{{ localErrorMessage
-                    }}</p>
+                }}</p>
 
                 <ul v-if="localEntries.length > 0 || canGoLocalParent" class="mt-3 divide-y divide-(--app-border)">
                     <li v-if="canGoLocalParent"
@@ -97,9 +97,8 @@
                     <li v-for="entry in localEntries" :key="entry.path" class="flex items-center gap-3 py-2"
                         :class="[isLocalEntrySelected(entry.path) ? 'bg-(--app-muted-surface)' : '', entry.isDirectory ? 'cursor-pointer' : 'cursor-grab']"
                         :draggable="!entry.isDirectory" @click="handleLocalEntryClick(entry, $event)"
-                        @dblclick="handleLocalEntryDoubleClick(entry)"
-                        @dragstart="handleLocalDragStart(entry, $event)" @dragend="handleLocalDragEnd"
-                        @contextmenu.prevent.stop="handleLocalContextMenu($event, entry)">
+                        @dblclick="handleLocalEntryDoubleClick(entry)" @dragstart="handleLocalDragStart(entry, $event)"
+                        @dragend="handleLocalDragEnd" @contextmenu.prevent.stop="handleLocalContextMenu($event, entry)">
                         <span class="w-14 text-xs font-semibold uppercase text-(--app-muted)">{{ entry.isDirectory ?
                             '📁' : '📄' }}</span>
                         <span class="min-w-0 flex-1 truncate text-sm text-(--app-text)">{{ entry.name }}</span>
@@ -172,9 +171,9 @@
             <article
                 class="relative rounded-2xl border border-(--app-border) bg-(--app-elevated) p-4 shadow-(--app-shadow-sm)"
                 :class="isRemoteDropActive ? 'ring-2 ring-(--app-accent) ring-offset-2 ring-offset-transparent' : ''"
-                @click="setActiveExplorerPane('remote')"
-                @contextmenu.prevent="openContextMenu($event, 'remote')" @dragover.prevent="handleRemoteDragOver"
-                @dragleave="handleRemoteDragLeave" @drop.prevent="handleRemoteDrop">
+                @click="setActiveExplorerPane('remote')" @contextmenu.prevent="openContextMenu($event, 'remote')"
+                @dragover.prevent="handleRemoteDragOver" @dragleave="handleRemoteDragLeave"
+                @drop.prevent="handleRemoteDrop">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
@@ -210,7 +209,8 @@
                     <div v-if="remoteClipboard || localClipboard" class="mt-2 flex flex-wrap items-center gap-2">
                         <span v-if="remoteClipboard" class="rounded-full px-2.5 py-1 text-xs font-semibold"
                             :class="remoteClipboard.mode === 'cut' ? 'bg-(--status-deleted-bg) text-(--status-deleted-text)' : 'bg-(--status-modified-soft) text-(--status-modified-text)'">
-                            {{ remoteClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy') }}
+                            {{ remoteClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy')
+                            }}
                             {{ remoteClipboard.entries.length }}
                         </span>
                         <span v-else-if="localClipboard" class="rounded-full px-2.5 py-1 text-xs font-semibold"
@@ -372,7 +372,8 @@
 
         <section class="rounded-2xl border border-(--app-border) bg-(--app-elevated) p-4 shadow-(--app-shadow-sm)">
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <h2 class="text-sm font-semibold uppercase tracking-[0.12em] text-(--app-text)">{{ t('servers.transferQueue') }}</h2>
+                <h2 class="text-sm font-semibold uppercase tracking-[0.12em] text-(--app-text)">{{
+                    t('servers.transferQueue') }}</h2>
                 <div class="flex flex-wrap items-center gap-2">
                     <span v-if="conflictRule !== 'ask'"
                         class="rounded-full border border-(--status-modified-border) bg-(--status-modified-soft) px-2.5 py-1 text-xs font-semibold text-(--status-modified-text)">
@@ -429,10 +430,11 @@
             </ul>
             <p v-else class="mt-3 text-sm text-(--app-muted)">{{ t('servers.noTransferQueue') }}</p>
 
-            <h3 class="mt-5 text-sm font-semibold uppercase tracking-[0.12em] text-(--app-text)">{{ t('servers.transferLog') }}</h3>
-            <ul v-if="transferLog.length > 0" class="mt-3 max-h-56 space-y-1 overflow-y-auto rounded-xl border border-(--app-border) bg-(--app-surface) p-2">
-                <li v-for="logItem in transferLog" :key="logItem.id"
-                    class="rounded-md px-2 py-1.5 text-xs"
+            <h3 class="mt-5 text-sm font-semibold uppercase tracking-[0.12em] text-(--app-text)">{{
+                t('servers.transferLog') }}</h3>
+            <ul v-if="transferLog.length > 0"
+                class="mt-3 max-h-56 space-y-1 overflow-y-auto rounded-xl border border-(--app-border) bg-(--app-surface) p-2">
+                <li v-for="logItem in transferLog" :key="logItem.id" class="rounded-md px-2 py-1.5 text-xs"
                     :class="getTransferLogLevelClass(logItem.level)">
                     <span class="font-semibold">{{ formatTransferTime(logItem.timestamp) }}</span>
                     <span class="mx-1">·</span>
@@ -450,10 +452,14 @@
                 <h2 class="text-lg font-semibold text-(--app-text)">{{ t('servers.conflictModalTitle') }}</h2>
                 <p class="mt-2 text-sm text-(--app-muted)">{{ t('servers.conflictModalDescription') }}</p>
 
-                <div class="mt-4 rounded-lg border border-(--app-border) bg-(--app-muted-surface) p-3 text-xs text-(--app-muted)">
-                    <p><span class="font-semibold text-(--app-text)">{{ t('servers.conflictSource') }}:</span> {{ conflictModalSourceEntry?.name }}</p>
-                    <p class="mt-1"><span class="font-semibold text-(--app-text)">{{ t('servers.conflictTarget') }}:</span> {{ conflictModalTargetEntry?.name }}</p>
-                    <p class="mt-1"><span class="font-semibold text-(--app-text)">{{ t('servers.conflictDestination') }}:</span> {{ conflictModalDestinationPath }}</p>
+                <div
+                    class="mt-4 rounded-lg border border-(--app-border) bg-(--app-muted-surface) p-3 text-xs text-(--app-muted)">
+                    <p><span class="font-semibold text-(--app-text)">{{ t('servers.conflictSource') }}:</span> {{
+                        conflictModalSourceEntry?.name }}</p>
+                    <p class="mt-1"><span class="font-semibold text-(--app-text)">{{ t('servers.conflictTarget')
+                            }}:</span> {{ conflictModalTargetEntry?.name }}</p>
+                    <p class="mt-1"><span class="font-semibold text-(--app-text)">{{ t('servers.conflictDestination')
+                            }}:</span> {{ conflictModalDestinationPath }}</p>
                 </div>
 
                 <div class="mt-4 grid gap-2 sm:grid-cols-2">
