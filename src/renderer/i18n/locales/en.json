@@ -281,6 +281,13 @@
         "cancel": "Cancel",
         "add": "Add"
     },
+    "snapshot": {
+        "take": "Take snapshot",
+        "scanning": "Scanning...",
+        "none": "No snapshot yet",
+        "files": "files",
+        "noBinding": "No binding configured for this environment. Click the ⋮ button to configure a path."
+    },
     "errors": {
         "loadProjects": "Failed to load projects.",
         "compareEnvironments": "Failed to compare environments.",

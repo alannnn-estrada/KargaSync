@@ -19,6 +19,9 @@ export const IPC_CHANNELS = {
     dialogConfirm: 'dialog:confirm',
     compareEnvironments: 'compare:environments',
     snapshotsCreate: 'snapshots:create',
+    snapshotsScanLocal: 'snapshots:scanLocal',
+    snapshotsScanRemote: 'snapshots:scanRemote',
+    snapshotsLatest: 'snapshots:latest',
     settingsGet: 'settings:get',
     settingsUpdate: 'settings:update',
     appMenuToggle: 'app-menu:toggle',
@@ -104,6 +107,9 @@ export interface RendererApi {
     createProject: (input: CreateProjectRequestDto) => Promise<CreateProjectResponseDto>;
     compareEnvironments: (input: CompareEnvironmentsRequestDto) => Promise<CompareEnvironmentsResponseDto>;
     createSnapshot: (input: CreateSnapshotRequestDto) => Promise<CreateSnapshotResponseDto>;
+    scanLocalSnapshot: (input: { projectId: number; environmentId: number; localPath: string; label?: string }) => Promise<CreateSnapshotResponseDto>;
+    scanRemoteSnapshot: (input: { projectId: number; environmentId: number; serverId: number; remotePath: string; label?: string }) => Promise<CreateSnapshotResponseDto>;
+    getLatestSnapshot: (environmentId: number) => Promise<CreateSnapshotResponseDto | null>;
     getSettings: () => Promise<GetSettingsResponseDto>;
     updateSettings: (input: UpdateSettingsRequestDto) => Promise<UpdateSettingsResponseDto>;
     toggleAppMenu: (anchor: AppMenuAnchorDto) => Promise<void>;

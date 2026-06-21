@@ -24,8 +24,9 @@
                         class="mt-2 w-full rounded-md border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
                         :placeholder="t('project.rootPath')" :disabled="isCreating">
                     <button type="submit"
-                        class="mt-3 w-full rounded-md border border-transparent bg-(--app-accent) px-3 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                        class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-transparent bg-(--app-accent) px-3 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="isCreating || !canCreateProject">
+                        <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
                         {{ isCreating ? t('project.creating') : t('project.create') }}
                     </button>
                 </form>
@@ -138,8 +139,15 @@
 
                                 <div class="flex flex-wrap items-center gap-3">
                                     <button type="submit"
-                                        class="rounded-lg bg-(--app-accent) px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                                        class="inline-flex items-center gap-2 rounded-lg bg-(--app-accent) px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                                         :disabled="!canCompare || isComparing">
+                                        <svg v-if="!isComparing" class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="1" y="3" width="6" height="10" rx="1"/><rect x="9" y="3" width="6" height="10" rx="1"/>
+                                            <path d="M7 8h2"/>
+                                        </svg>
+                                        <svg v-else class="h-4 w-4 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+                                            <path d="M8 2a6 6 0 1 0 6 6" stroke-linecap="round"/>
+                                        </svg>
                                         {{ isComparing ? t('comparison.running') : t('comparison.run') }}
                                     </button>
 
@@ -199,36 +207,87 @@
                                         class="min-w-0 flex-1 rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
                                         :placeholder="t('project.newEnvironmentPlaceholder')" />
                                     <button type="submit"
-                                        class="shrink-0 rounded-lg bg-(--app-accent) px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90">{{ t('actions.add') }}</button>
+                                        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-(--app-accent) px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+                                        {{ t('actions.add') }}
+                                    </button>
                                 </form>
 
                                 <div v-if="loadingEnvironments" class="text-sm text-(--app-muted)">{{
                                     t('project.loadingEnvironments') }}</div>
 
-                                <ul v-else-if="displayedEnvironments.length" class="space-y-1.5">
+                                <ul v-else-if="displayedEnvironments.length" class="space-y-2">
                                     <li v-for="env in displayedEnvironments" :key="env.id"
                                         class="rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-3">
+                                        <!-- Top row: name + actions -->
                                         <div class="flex min-w-0 items-center justify-between gap-2">
-                                            <div class="min-w-0 truncate text-sm font-medium text-(--app-text)">{{ env.name }}</div>
-                                            <div class="flex shrink-0 items-center gap-1.5">
-                                                <button type="button"
-                                                    class="rounded-md border border-(--app-border) bg-(--app-elevated) px-2.5 py-1 text-xs font-medium text-(--app-text) transition hover:border-(--app-accent) hover:text-(--app-accent)"
-                                                    @click="openBindingModal(env)">{{ t('project.configure') }}</button>
-                                                <button type="button"
-                                                    class="rounded-md border border-(--app-border) bg-(--app-elevated) px-2.5 py-1 text-xs font-medium text-(--app-muted) transition hover:text-(--app-text)"
-                                                    @click="openEditModalForEnvironment(env)">{{ t('actions.edit')
-                                                    }}</button>
-                                                <button type="button"
-                                                    class="rounded-md border border-(--status-deleted-border) bg-(--status-deleted-bg) px-2.5 py-1 text-xs font-medium text-(--status-deleted-text) transition hover:opacity-80"
-                                                    @click="handleDeleteEnvironment(env)">{{ t('actions.delete')
-                                                    }}</button>
+                                            <span class="min-w-0 truncate text-sm font-semibold text-(--app-text)">{{ env.name }}</span>
+                                            <div class="flex shrink-0 items-center gap-1">
+                                                <!-- Configure binding -->
+                                                <button type="button" :title="t('project.configure')"
+                                                    class="flex h-7 w-7 items-center justify-center rounded-md border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                                                    @click="openBindingModal(env)">
+                                                    <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M8 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm0 4.5A1.5 1.5 0 1 0 8 10a1.5 1.5 0 0 0 0-3zm0 4.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/>
+                                                    </svg>
+                                                </button>
+                                                <!-- Edit name -->
+                                                <button type="button" :title="t('actions.edit')"
+                                                    class="flex h-7 w-7 items-center justify-center rounded-md border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:text-(--app-text)"
+                                                    @click="openEditModalForEnvironment(env)">
+                                                    <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M11.5 2.5a1.41 1.41 0 0 1 2 2L5 13H2v-3L11.5 2.5Z"/>
+                                                    </svg>
+                                                </button>
+                                                <!-- Delete -->
+                                                <button type="button" :title="t('actions.delete')"
+                                                    class="flex h-7 w-7 items-center justify-center rounded-md border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:border-(--status-deleted-border) hover:text-(--status-deleted-text)"
+                                                    @click="handleDeleteEnvironment(env)">
+                                                    <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                        <polyline points="2 4 14 4"/><path d="M5 4V2h6v2"/><path d="M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/>
+                                                    </svg>
+                                                </button>
                                             </div>
                                         </div>
+
+                                        <!-- Snapshot row -->
+                                        <div class="mt-2 flex items-center gap-2">
+                                            <!-- Last snapshot badge -->
+                                            <span v-if="snapshotStates[env.id]?.snapshot"
+                                                class="inline-flex items-center gap-1 rounded-full border border-(--status-added-border) bg-(--status-added-bg) px-2 py-0.5 text-[10px] font-semibold text-(--status-added-text)">
+                                                <svg class="h-2.5 w-2.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="5"/><path d="M6 3v3l2 1.5"/></svg>
+                                                {{ snapshotStates[env.id].snapshot.fileCount }} {{ t('snapshot.files') }}
+                                            </span>
+                                            <span v-else-if="!snapshotStates[env.id]?.loading"
+                                                class="rounded-full border border-(--app-border) bg-(--app-muted-surface) px-2 py-0.5 text-[10px] text-(--app-muted)">
+                                                {{ t('snapshot.none') }}
+                                            </span>
+
+                                            <!-- Scan button -->
+                                            <button type="button"
+                                                :disabled="snapshotStates[env.id]?.loading"
+                                                class="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-(--app-border) bg-(--app-elevated) px-2.5 py-1 text-xs font-medium text-(--app-text) transition hover:border-(--app-accent) hover:text-(--app-accent) disabled:cursor-wait disabled:opacity-50"
+                                                @click="takeScanSnapshot(env)">
+                                                <svg v-if="!snapshotStates[env.id]?.loading" class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M13 5.5H11l-1.5-2h-3L5 5.5H3a1 1 0 0 0-1 1V12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1Z"/>
+                                                    <circle cx="8" cy="9" r="2"/>
+                                                </svg>
+                                                <svg v-else class="h-3.5 w-3.5 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                    <path d="M8 2a6 6 0 1 0 6 6" stroke-linecap="round"/>
+                                                </svg>
+                                                {{ snapshotStates[env.id]?.loading ? t('snapshot.scanning') : t('snapshot.take') }}
+                                            </button>
+                                        </div>
+
+                                        <!-- Scan error -->
+                                        <p v-if="snapshotStates[env.id]?.error"
+                                            class="mt-1.5 rounded-md border border-(--status-deleted-border) bg-(--status-deleted-soft) px-2 py-1 text-xs text-(--status-deleted-text)">
+                                            {{ snapshotStates[env.id].error }}
+                                        </p>
                                     </li>
                                 </ul>
 
-                                <p v-else class="text-sm text-(--app-muted)">{{ t('project.noEnvironmentsConfigured') }}
-                                </p>
+                                <p v-else class="rounded-xl border border-dashed border-(--app-border) bg-(--app-elevated) px-3 py-4 text-sm text-(--app-muted)">{{ t('project.noEnvironmentsConfigured') }}</p>
                             </div>
                         </article>
                     </div>
@@ -392,6 +451,7 @@ import { useApi } from '../composables';
 import { EnvironmentDiffTree } from '../components';
 import { useProjectComparisonStore } from '../stores';
 import type { GetAllProjectsResponseDto } from '../services';
+import { scanLocalSnapshot, scanRemoteSnapshot, getLatestSnapshot } from '../services/api';
 import { formatUiErrorMessage } from '../i18n';
 
 const { createProject, getProjects, compareEnvironments, listServers, listEnvironments, createEnvironment, assignEnvironmentBinding, listEnvironmentBindings, updateEnvironment, deleteEnvironment, updateProject, deleteProject } = useApi();
@@ -413,6 +473,7 @@ const newEnvironmentName = ref('');
 const servers = ref<any[]>([]);
 const loadingEnvironments = ref(false);
 const loadingServers = ref(false);
+const snapshotStates = ref<Record<number, { loading: boolean; error: string; snapshot: any | null }>>({});
 const bindingModal = ref({ visible: false, environment: null as any, selectedServer: null as number | null, remotePath: '' });
 
 const projects = projectStore.projects;
@@ -463,6 +524,60 @@ async function loadServers(): Promise<void> {
     }
 }
 
+async function loadSnapshotForEnv(envId: number): Promise<void> {
+    if (!snapshotStates.value[envId]) {
+        snapshotStates.value[envId] = { loading: false, error: '', snapshot: null };
+    }
+    try {
+        const snap = await getLatestSnapshot(envId);
+        snapshotStates.value[envId].snapshot = snap;
+    } catch { /* ignore */ }
+}
+
+async function takeScanSnapshot(env: any): Promise<void> {
+    if (!snapshotStates.value[env.id]) {
+        snapshotStates.value[env.id] = { loading: false, error: '', snapshot: null };
+    }
+    snapshotStates.value[env.id].loading = true;
+    snapshotStates.value[env.id].error = '';
+    const projectId = selectedProjectId.value;
+    if (!projectId) return;
+
+    try {
+        // Determine binding type
+        const bindings = await listEnvironmentBindings(env.id);
+        const remote = bindings.find((b: any) => b.bindingType === 'remote');
+        const local = bindings.find((b: any) => b.bindingType === 'local');
+
+        let snap: any;
+        if (remote && remote.serverId && remote.remotePath) {
+            snap = await scanRemoteSnapshot({
+                projectId,
+                environmentId: env.id,
+                serverId: remote.serverId,
+                remotePath: remote.remotePath,
+                label: new Date().toLocaleString(),
+            });
+        } else if (local && local.localPath) {
+            snap = await scanLocalSnapshot({
+                projectId,
+                environmentId: env.id,
+                localPath: local.localPath,
+                label: new Date().toLocaleString(),
+            });
+        } else {
+            snapshotStates.value[env.id].error = t('snapshot.noBinding');
+            return;
+        }
+
+        snapshotStates.value[env.id].snapshot = snap;
+    } catch (e: any) {
+        snapshotStates.value[env.id].error = e?.message ?? t('errors.unexpected');
+    } finally {
+        snapshotStates.value[env.id].loading = false;
+    }
+}
+
 async function loadEnvironmentsForSelectedProject(): Promise<void> {
     const projectId = selectedProjectId.value;
     if (projectId === null) {
@@ -476,6 +591,10 @@ async function loadEnvironmentsForSelectedProject(): Promise<void> {
         environments.value = envs.map((e) => ({ ...e, _selectedServer: null, _remotePath: '' }));
         // store into central project store so sidebar and other views stay in sync
         projectStore.setEnvironmentsForProject(projectId, environments.value);
+        // load latest snapshot for each env
+        for (const env of environments.value) {
+            void loadSnapshotForEnv(env.id);
+        }
 
         // Try to hydrate from any existing remote bindings (use first remote binding if present)
         for (const env of environments.value) {

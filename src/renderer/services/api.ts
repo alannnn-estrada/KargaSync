@@ -140,6 +140,17 @@ export const createSnapshot = (
     input: CreateSnapshotRequestDto,
 ): Promise<CreateSnapshotResponseDto> => apiService.createSnapshot(input);
 
+export const scanLocalSnapshot = (
+    input: { projectId: number; environmentId: number; localPath: string; label?: string },
+): Promise<CreateSnapshotResponseDto> => getRendererApi().scanLocalSnapshot(input);
+
+export const scanRemoteSnapshot = (
+    input: { projectId: number; environmentId: number; serverId: number; remotePath: string; label?: string },
+): Promise<CreateSnapshotResponseDto> => getRendererApi().scanRemoteSnapshot(input);
+
+export const getLatestSnapshot = (environmentId: number): Promise<CreateSnapshotResponseDto | null> =>
+    getRendererApi().getLatestSnapshot(environmentId);
+
 export const getSettings = (): Promise<GetSettingsResponseDto> => apiService.getSettings();
 
 export const updateSettings = (

@@ -85,21 +85,30 @@
 
                     <div class="mt-1 flex flex-wrap items-center gap-2">
                         <button type="button"
-                            class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-4 py-2 text-sm font-semibold text-(--app-text) transition hover:border-(--app-accent)"
+                            class="inline-flex items-center gap-2 rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-4 py-2 text-sm font-semibold text-(--app-text) transition hover:border-(--app-accent)"
                             :disabled="!canSubmit || isTesting" @click="handleTestConnection">
+                            <svg v-if="!isTesting" class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 8a6 6 0 1 0 12 0M8 2v4M8 11v.5"/>
+                            </svg>
+                            <svg v-else class="h-4 w-4 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2a6 6 0 1 0 6 6" stroke-linecap="round"/></svg>
                             {{ isTesting ? t('servers.testing') : t('servers.test') }}
                         </button>
 
                         <button type="submit"
-                            class="rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                            class="inline-flex items-center gap-2 rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                             :disabled="!canSubmit || isSaving">
-                            {{ isSaving ? t('servers.creating') : (isEditing ? t('servers.save') : t('servers.create'))
-                            }}
+                            <svg v-if="!isSaving" class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path v-if="!isEditing" d="M8 3v10M3 8h10"/>
+                                <path v-else d="M2 11l4-4 3 3 5-6"/>
+                            </svg>
+                            <svg v-else class="h-4 w-4 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2a6 6 0 1 0 6 6" stroke-linecap="round"/></svg>
+                            {{ isSaving ? t('servers.creating') : (isEditing ? t('servers.save') : t('servers.create')) }}
                         </button>
 
                         <button v-if="isEditing" type="button"
-                            class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-4 py-2 text-sm font-semibold"
+                            class="inline-flex items-center gap-2 rounded-lg border border-(--app-border) bg-(--app-elevated) px-4 py-2 text-sm font-semibold"
                             :disabled="isSaving" @click="resetForm">
+                            <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg>
                             {{ t('servers.cancel') }}
                         </button>
                     </div>
@@ -138,13 +147,19 @@
 
                         <div class="mt-3 flex gap-2">
                             <button type="button"
-                                class="rounded-md border border-(--app-border) bg-(--app-elevated) px-3 py-1.5 text-xs"
+                                class="inline-flex items-center gap-1.5 rounded-md border border-(--app-border) bg-(--app-elevated) px-3 py-1.5 text-xs transition hover:border-(--app-accent) hover:text-(--app-accent)"
                                 @click="beginEdit(server)">
+                                <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11.5 2.5a1.41 1.41 0 0 1 2 2L5 13H2v-3L11.5 2.5Z"/>
+                                </svg>
                                 {{ t('servers.edit') }}
                             </button>
                             <button type="button"
-                                class="rounded-md border border-(--status-deleted-border) bg-(--status-deleted-bg) px-3 py-1.5 text-xs text-(--status-deleted-text)"
+                                class="inline-flex items-center gap-1.5 rounded-md border border-(--status-deleted-border) bg-(--status-deleted-bg) px-3 py-1.5 text-xs text-(--status-deleted-text) transition hover:opacity-80"
                                 @click="handleDeleteServer(server.id)">
+                                <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="2 4 14 4"/><path d="M5 4V2h6v2"/><path d="M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/>
+                                </svg>
                                 {{ t('servers.delete') }}
                             </button>
                         </div>

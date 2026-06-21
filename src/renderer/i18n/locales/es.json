@@ -286,6 +286,13 @@
         "cancel": "Cancelar",
         "add": "Agregar"
     },
+    "snapshot": {
+        "take": "Tomar instantánea",
+        "scanning": "Escaneando...",
+        "none": "Sin instantánea",
+        "files": "archivos",
+        "noBinding": "Sin binding configurado. Usa el botón ⋮ para configurar una ruta."
+    },
     "errors": {
         "loadProjects": "No se pudieron cargar los proyectos.",
         "compareEnvironments": "No se pudieron comparar los entornos.",

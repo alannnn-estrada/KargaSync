@@ -242,6 +242,9 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         IPC_CHANNELS.projectsCreate,
         IPC_CHANNELS.compareEnvironments,
         IPC_CHANNELS.snapshotsCreate,
+        IPC_CHANNELS.snapshotsScanLocal,
+        IPC_CHANNELS.snapshotsScanRemote,
+        IPC_CHANNELS.snapshotsLatest,
         IPC_CHANNELS.settingsGet,
         IPC_CHANNELS.settingsUpdate,
         IPC_CHANNELS.appMenuToggle,
@@ -1089,5 +1092,151 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         }
 
         await shell.openPath(localPath);
+    });
+
+    // ── Snapshot scanning ─────────────────────────────────────────────────────
+
+    ipcMain.handle(IPC_CHANNELS.snapshotsLatest, async (_event, environmentId: number) => {
+        const stmt = database.db.prepare(
+            'SELECT id, project_id AS projectId, environment_id AS environmentId, label, created_at AS createdAt, file_count AS fileCount, total_bytes AS totalBytes FROM snapshots WHERE environment_id = ? ORDER BY created_at DESC LIMIT 1',
+        );
+        const row = stmt.get(environmentId) as import('../../../db/types').SnapshotRow | undefined;
+        if (!row) return null;
+        return toSnapshotDto(row);
+    });
+
+    ipcMain.handle(IPC_CHANNELS.snapshotsScanLocal, async (
+        _event,
+        input: { projectId: number; environmentId: number; localPath: string; label?: string },
+    ) => {
+        const crypto = await import('node:crypto');
+        const files: import('../../../core/application/commands/create-snapshot').SnapshotFileInput[] = [];
+
+        async function walkLocal(dir: string, base: string): Promise<void> {
+            const entries = await fs.readdir(dir, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name);
+                const relPath = path.join(base, entry.name).replace(/\\/g, '/');
+                if (entry.isDirectory()) {
+                    await walkLocal(fullPath, relPath);
+                } else if (entry.isFile()) {
+                    const stat = await fs.stat(fullPath);
+                    const buf = await fs.readFile(fullPath);
+                    const hash = crypto.createHash('sha256').update(buf).digest('hex');
+                    files.push({
+                        relativePath: relPath,
+                        absolutePath: fullPath,
+                        contentHash: hash,
+                        sizeBytes: stat.size,
+                        modifiedAt: stat.mtime.toISOString(),
+                    });
+                }
+            }
+        }
+
+        await walkLocal(input.localPath, '');
+        const snapshot = createSnapshotCommand.execute({
+            projectId: input.projectId,
+            environmentId: input.environmentId,
+            label: input.label ?? null,
+            files,
+        });
+        return toSnapshotDto(snapshot);
+    });
+
+    ipcMain.handle(IPC_CHANNELS.snapshotsScanRemote, async (
+        _event,
+        input: { projectId: number; environmentId: number; serverId: number; remotePath: string; label?: string },
+    ) => {
+        const crypto = await import('node:crypto');
+        const serverRow = database.projectManager.getServer(input.serverId);
+        if (!serverRow) throw new Error(`Server not found: ${input.serverId}`);
+        const credential = database.credentials.getCredential(serverRow.credentialRef);
+
+        const files: import('../../../core/application/commands/create-snapshot').SnapshotFileInput[] = [];
+
+        function buildProxyHash(size: number, mtime: string | undefined, relPath: string): string {
+            return crypto.createHash('sha256').update(`${mtime ?? ''}|${size}|${relPath}`).digest('hex');
+        }
+
+        if (serverRow.protocol === 'sftp') {
+            const client = new SftpClient();
+            try {
+                const connectOpts: any = { host: serverRow.host, port: serverRow.port, username: serverRow.username };
+                if (serverRow.authType === 'password') connectOpts.password = credential ?? undefined;
+                else connectOpts.privateKey = credential ?? undefined;
+                await withTimeout(client.connect(connectOpts), 'SFTP connect');
+
+                async function walkSftp(remotePath: string, base: string): Promise<void> {
+                    const listing = await client.list(remotePath || '.');
+                    for (const item of listing) {
+                        const itemRemote = `${remotePath === '/' ? '' : remotePath}/${item.name}`;
+                        const relPath = `${base ? base + '/' : ''}${item.name}`;
+                        if (item.type === 'd') {
+                            await walkSftp(itemRemote, relPath);
+                        } else if (item.type === '-') {
+                            const mtime = item.modifyTime ? new Date(item.modifyTime * 1000).toISOString() : undefined;
+                            files.push({
+                                relativePath: relPath,
+                                contentHash: buildProxyHash(item.size, mtime, relPath),
+                                sizeBytes: item.size,
+                                modifiedAt: mtime ?? null,
+                            });
+                        }
+                    }
+                }
+
+                const root = input.remotePath || '/';
+                await withTimeout(walkSftp(root, ''), 'SFTP scan');
+            } finally {
+                try { await client.end(); } catch { /* ignore */ }
+            }
+        } else {
+            // FTP
+            const ftpClient = createFtpClient();
+            try {
+                await withTimeout(ftpClient.access({
+                    host: normalizeFtpHost(serverRow.host),
+                    port: serverRow.port,
+                    user: serverRow.username,
+                    password: credential ?? undefined,
+                    secure: false,
+                }), 'FTP connect');
+
+                async function walkFtp(remotePath: string, base: string): Promise<void> {
+                    const normalized = normalizeFtpRemotePath(remotePath);
+                    const listing = await ftpClient.list(normalized || '.');
+                    for (const item of listing) {
+                        if (!item.name || item.name === '.' || item.name === '..') continue;
+                        const childRemote = `${remotePath}/${item.name}`;
+                        const relPath = `${base ? base + '/' : ''}${item.name}`;
+                        if (item.isDirectory) {
+                            await walkFtp(childRemote, relPath);
+                        } else {
+                            const mtime = item.rawModifiedAt ? new Date(item.rawModifiedAt).toISOString() : undefined;
+                            files.push({
+                                relativePath: relPath,
+                                contentHash: buildProxyHash(item.size ?? 0, mtime, relPath),
+                                sizeBytes: item.size ?? 0,
+                                modifiedAt: mtime ?? null,
+                            });
+                        }
+                    }
+                }
+
+                const root = input.remotePath || '/';
+                await withTimeout(walkFtp(root, ''), 'FTP scan');
+            } finally {
+                try { ftpClient.close(); } catch { /* ignore */ }
+            }
+        }
+
+        const snapshot = createSnapshotCommand.execute({
+            projectId: input.projectId,
+            environmentId: input.environmentId,
+            label: input.label ?? null,
+            files,
+        });
+        return toSnapshotDto(snapshot);
     });
 }
