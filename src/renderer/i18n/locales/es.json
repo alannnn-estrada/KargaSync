@@ -342,6 +342,28 @@
         "missingBinding": "El entorno no tiene enlace configurado",
         "errorTitle": "Error en el despliegue"
     },
+    "shortcuts": {
+        "title": "Atajos de teclado",
+        "navSection": "Navegación",
+        "explorerSection": "Explorador de archivos",
+        "nav1": "Ir al Workspace",
+        "nav2": "Ir a Servidores",
+        "nav3": "Ir al Explorador",
+        "nav4": "Ir a Configuración",
+        "navSettings": "Abrir Configuración",
+        "showShortcuts": "Mostrar este panel",
+        "explorerRefresh": "Actualizar ambos paneles",
+        "explorerSwitchPane": "Cambiar panel activo (local ↔ remoto)",
+        "explorerOpen": "Abrir carpeta / seleccionar archivo",
+        "explorerParent": "Subir al directorio padre",
+        "explorerDelete": "Eliminar seleccionados",
+        "explorerRename": "Renombrar seleccionado",
+        "explorerSelectAll": "Seleccionar todo",
+        "explorerCopy": "Copiar seleccionados",
+        "explorerCut": "Cortar seleccionados",
+        "explorerPaste": "Pegar",
+        "explorerExtendSel": "Extender selección arriba/abajo"
+    },
     "actions": {
         "expandFolder": "Expandir carpeta",
         "collapseFolder": "Colapsar carpeta",

@@ -173,14 +173,19 @@
                     </div>
                 </div>
 
-                <!-- Bottom: theme toggle (both modes) -->
-                <div class="mt-auto" :class="isSidebarCollapsed ? '' : 'border-t border-(--app-border) pt-3'">
+                <!-- Bottom: theme + shortcuts -->
+                <div class="mt-auto flex gap-1" :class="isSidebarCollapsed ? 'flex-col' : 'border-t border-(--app-border) pt-3'">
                     <button type="button"
-                        class="flex items-center justify-center rounded border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
-                        :class="isSidebarCollapsed ? 'h-7 w-7' : 'h-7 w-full gap-2 px-2 text-xs'"
+                        class="flex shrink-0 items-center justify-center rounded border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                        :class="isSidebarCollapsed ? 'h-7 w-7' : 'h-7 flex-1 gap-2 px-2 text-xs'"
                         :title="themeLabel + ' — cycle theme'" @click="cycleTheme">
                         <span class="text-xs leading-none">{{ themeLabel }}</span>
                         <span v-if="!isSidebarCollapsed" class="uppercase tracking-[0.1em] text-[10px] font-semibold">{{ settingsStore.theme }}</span>
+                    </button>
+                    <button type="button"
+                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-(--app-border) bg-(--app-elevated) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                        :title="t('shortcuts.title') + ' (?)'" @click="shortcutsOpen = true">
+                        <span class="text-[10px] font-bold leading-none">?</span>
                     </button>
                 </div>
             </div>
@@ -196,6 +201,7 @@
         </main>
 
         <ChangelogModal />
+        <KeyboardShortcutsModal :visible="shortcutsOpen" @close="shortcutsOpen = false" />
     </div>
 </template>
 
@@ -204,7 +210,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import logoImage from './assets/logo.png';
-import { ChangelogModal } from './renderer/components';
+import { ChangelogModal, KeyboardShortcutsModal } from './renderer/components';
 import { useChangelogStore } from './renderer/stores/changelog-store';
 import { useProjectComparisonStore, useSidebarStore, useSettingsStore } from './renderer/stores';
 import { listEnvironments } from './renderer/services/api';
@@ -219,6 +225,7 @@ const SIDEBAR_COLLAPSED_WIDTH = 84;
 const SIDEBAR_STORAGE_KEY = 'karga-sync.ui.sidebar';
 
 const isSidebarCollapsed = ref(false);
+const shortcutsOpen = ref(false);
 const sidebarWidth = ref(SIDEBAR_DEFAULT_WIDTH);
 const isResizing = ref(false);
 const changelogStore = useChangelogStore();
@@ -364,6 +371,31 @@ function openChangelog(): void {
     changelogStore.openModal();
 }
 
+function isTextEditingTarget(target: EventTarget | null): boolean {
+    if (!target || !(target instanceof HTMLElement)) return false;
+    const tag = target.tagName.toLowerCase();
+    return tag === 'input' || tag === 'textarea' || target.isContentEditable;
+}
+
+function handleGlobalShortcuts(e: KeyboardEvent): void {
+    if (isTextEditingTarget(e.target)) return;
+
+    const key = e.key;
+    const isCtrl = e.ctrlKey || e.metaKey;
+
+    if (key === '?' && !isCtrl && !e.altKey) {
+        shortcutsOpen.value = true;
+        return;
+    }
+
+    if (isCtrl && !e.shiftKey && !e.altKey) {
+        if (key === '1') { e.preventDefault(); void router.push('/workspace'); return; }
+        if (key === '2') { e.preventDefault(); void router.push('/servers'); return; }
+        if (key === '3') { e.preventDefault(); void router.push('/explorer'); return; }
+        if (key === '4' || key === ',') { e.preventDefault(); void router.push('/settings'); return; }
+    }
+}
+
 function onResizeMove(event: MouseEvent): void {
     if (!isResizing.value || isSidebarCollapsed.value) {
         return;
@@ -397,16 +429,16 @@ function beginResize(event: MouseEvent): void {
 onMounted(() => {
     loadSidebarState();
     void changelogStore.initialize();
-    // restore sidebar UI (expanded projects, last selected project)
     sidebar.load();
-    // restore last view when available
     if (sidebar.lastView) {
         void router.replace(sidebar.lastView);
     }
+    window.addEventListener('keydown', handleGlobalShortcuts);
 });
 
 onBeforeUnmount(() => {
     stopResize();
+    window.removeEventListener('keydown', handleGlobalShortcuts);
 });
 
 watch([isSidebarCollapsed, sidebarWidth], () => {

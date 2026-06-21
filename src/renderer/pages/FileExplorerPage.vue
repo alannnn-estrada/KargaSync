@@ -5,7 +5,7 @@
                 t('servers.ftpExplorer') }}</p>
             <span class="h-3 w-px bg-(--app-border)" />
             <h1 class="text-sm font-semibold tracking-tight text-(--app-text)">{{ t('servers.explorerMenu') }}</h1>
-            <span class="ml-auto text-xs text-(--app-muted)">Ctrl+R — {{ t('servers.refresh') }}</span>
+            <span class="ml-auto text-xs text-(--app-muted)">Tab — switch pane &nbsp;·&nbsp; Ctrl+R — {{ t('servers.refresh') }}</span>
         </header>
 
         <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
@@ -293,6 +293,36 @@
                     </div>
                 </div>
 
+                <label class="mt-3 block">
+                    <span class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">{{
+                        t('servers.remotePath') }}</span>
+                    <input v-model="remotePath" type="text"
+                        class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
+                        :disabled="!selectedServerId" @keyup.enter="loadRemoteFiles" />
+                </label>
+
+                <div v-if="needsPassword"
+                    class="mt-3 rounded-xl border border-(--status-modified-border) bg-(--status-modified-soft) p-3">
+                    <p class="text-xs font-medium uppercase tracking-[0.12em] text-(--status-modified-text)">{{
+                        t('servers.ftpReconnect') }}</p>
+                    <input v-model="temporaryUsername" type="text"
+                        class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm outline-none"
+                        :placeholder="t('servers.usernamePlaceholder')" />
+                    <input v-model="temporaryPassword" type="password"
+                        class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm outline-none"
+                        :placeholder="t('servers.passwordPlaceholder')" />
+                    <button type="button"
+                        class="mt-2 rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white"
+                        :disabled="!temporaryUsername.trim() && !temporaryPassword.trim()" @click="retryWithPassword">
+                        {{ t('servers.retry') }}
+                    </button>
+                    <button type="button"
+                        class="mt-2 ml-2 rounded-lg border border-(--app-border) bg-(--app-elevated) px-4 py-2 text-sm font-semibold"
+                        @click="cancelReconnect">
+                        {{ t('servers.cancel') }}
+                    </button>
+                </div>
+
                 <!-- Remote selection bar + actions popup -->
                 <div class="mt-3 flex items-center gap-2">
                     <div class="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-2.5 py-1.5">
@@ -360,36 +390,6 @@
                             </template>
                         </div>
                     </div>
-                </div>
-
-                <label class="mt-3 block">
-                    <span class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">{{
-                        t('servers.remotePath') }}</span>
-                    <input v-model="remotePath" type="text"
-                        class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
-                        :disabled="!selectedServerId" @keyup.enter="loadRemoteFiles" />
-                </label>
-
-                <div v-if="needsPassword"
-                    class="mt-3 rounded-xl border border-(--status-modified-border) bg-(--status-modified-soft) p-3">
-                    <p class="text-xs font-medium uppercase tracking-[0.12em] text-(--status-modified-text)">{{
-                        t('servers.ftpReconnect') }}</p>
-                    <input v-model="temporaryUsername" type="text"
-                        class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm outline-none"
-                        :placeholder="t('servers.usernamePlaceholder')" />
-                    <input v-model="temporaryPassword" type="password"
-                        class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm outline-none"
-                        :placeholder="t('servers.passwordPlaceholder')" />
-                    <button type="button"
-                        class="mt-2 rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white"
-                        :disabled="!temporaryUsername.trim() && !temporaryPassword.trim()" @click="retryWithPassword">
-                        {{ t('servers.retry') }}
-                    </button>
-                    <button type="button"
-                        class="mt-2 ml-2 rounded-lg border border-(--app-border) bg-(--app-elevated) px-4 py-2 text-sm font-semibold"
-                        @click="cancelReconnect">
-                        {{ t('servers.cancel') }}
-                    </button>
                 </div>
 
                 <!-- Remote sort + filter toolbar -->
@@ -547,14 +547,11 @@
                 <h2 class="text-sm font-semibold uppercase tracking-[0.12em] text-(--app-text)">{{
                     t('servers.transferQueue') }}</h2>
                 <div class="flex flex-wrap items-center gap-2">
-                    <span v-if="conflictRule !== 'ask'"
-                        class="rounded-full border border-(--status-modified-border) bg-(--status-modified-soft) px-2.5 py-1 text-xs font-semibold text-(--status-modified-text)">
+                    <button v-if="conflictRule !== 'ask'" type="button"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-(--status-modified-border) bg-(--status-modified-soft) px-2.5 py-1 text-xs font-semibold text-(--status-modified-text) transition hover:opacity-75"
+                        @click="resetConflictRule">
                         {{ t('servers.conflictRuleActive', { rule: formatConflictRule(conflictRule) }) }}
-                    </span>
-                    <button type="button"
-                        class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-1.5 text-xs font-semibold"
-                        :disabled="conflictRule === 'ask'" @click="resetConflictRule">
-                        {{ t('servers.resetConflictRule') }}
+                        <span aria-hidden="true">×</span>
                     </button>
                     <button type="button"
                         class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-1.5 text-xs font-semibold"
@@ -2272,6 +2269,13 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
         return;
     }
 
+    // Tab: switch active pane
+    if (event.key === 'Tab' && !isClipboardShortcut) {
+        event.preventDefault();
+        setActiveExplorerPane(activeExplorerPane.value === 'local' ? 'remote' : 'local');
+        return;
+    }
+
     if (activeExplorerPane.value === 'local') {
         if (isClipboardShortcut && key === 'c') {
             if (selectedLocalEntries.value.length > 0) {
@@ -2310,6 +2314,23 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
             if (entry) {
                 event.preventDefault();
                 renameLocalEntry(entry);
+            }
+            return;
+        }
+
+        if (event.key === 'Backspace') {
+            if (canGoLocalParent.value) {
+                event.preventDefault();
+                void goLocalParent();
+            }
+            return;
+        }
+
+        if (event.key === 'Enter') {
+            const entry = selectedLocalEntry.value;
+            if (entry) {
+                event.preventDefault();
+                void openLocalEntry(entry);
             }
             return;
         }
@@ -2364,6 +2385,23 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
             return;
         }
 
+        if (event.key === 'Backspace') {
+            if (canGoRemoteParent.value) {
+                event.preventDefault();
+                void goRemoteParent();
+            }
+            return;
+        }
+
+        if (event.key === 'Enter') {
+            const entry = selectedRemoteEntry.value;
+            if (entry) {
+                event.preventDefault();
+                void openRemoteEntry(entry);
+            }
+            return;
+        }
+
         if (event.shiftKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             event.preventDefault();
             extendRemoteSelectionByKey(event.key === 'ArrowDown' ? 'down' : 'up');
@@ -2410,6 +2448,9 @@ async function pasteLocalEntryToRemoteRecursive(
     }
 
     const contentBase64 = await localFilesService.readFile(sourceEntry.path);
+    if (operationId) {
+        pushTransferLog(`↑ ${sourceEntry.name}`, 'info', operationId);
+    }
     await backupBeforeUpload(resolvedDestinationPath);
     await remoteFilesService.uploadRemoteFile(selectedServerId.value, resolvedDestinationPath, contentBase64, getCredentialOverride());
 }

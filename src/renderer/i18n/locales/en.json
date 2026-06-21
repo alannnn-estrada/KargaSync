@@ -342,6 +342,28 @@
         "missingBinding": "Environment has no binding configured",
         "errorTitle": "Deploy failed"
     },
+    "shortcuts": {
+        "title": "Keyboard shortcuts",
+        "navSection": "Navigation",
+        "explorerSection": "File explorer",
+        "nav1": "Go to Workspace",
+        "nav2": "Go to Servers",
+        "nav3": "Go to Explorer",
+        "nav4": "Go to Settings",
+        "navSettings": "Open Settings",
+        "showShortcuts": "Show this panel",
+        "explorerRefresh": "Refresh both panes",
+        "explorerSwitchPane": "Switch active pane (local ↔ remote)",
+        "explorerOpen": "Open folder / select file",
+        "explorerParent": "Go to parent folder",
+        "explorerDelete": "Delete selected",
+        "explorerRename": "Rename selected",
+        "explorerSelectAll": "Select all",
+        "explorerCopy": "Copy selected",
+        "explorerCut": "Cut selected",
+        "explorerPaste": "Paste",
+        "explorerExtendSel": "Extend selection up/down"
+    },
     "actions": {
         "expandFolder": "Expand folder",
         "collapseFolder": "Collapse folder",

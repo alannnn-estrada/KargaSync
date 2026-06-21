@@ -4,3 +4,4 @@ export { default as ChangelogModal } from './ChangelogModal.vue';
 export { default as RemoteFileExplorer } from './RemoteFileExplorer.vue';
 export { default as IgnorePatternsPanel } from './IgnorePatternsPanel.vue';
 export { default as DeployProgressModal } from './DeployProgressModal.vue';
+export { default as KeyboardShortcutsModal } from './KeyboardShortcutsModal.vue';
