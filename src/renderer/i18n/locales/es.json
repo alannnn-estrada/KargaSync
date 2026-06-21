@@ -161,6 +161,7 @@
         "newFilePrompt": "Nombre del archivo",
         "renamePrompt": "Nuevo nombre",
         "openRemoteFileConfirm": "¿Quieres descargar y abrir este archivo con la app predeterminada?",
+        "redownloadConfirm": "\"{name}\" ya está abierto para edición. ¿Volver a descargar del servidor? Se perderán los cambios locales.",
         "editRemoteTitle": "Editar: {name}",
         "editorPlaceholder": "Contenido del archivo remoto",
         "saveChanges": "Guardar cambios",
@@ -312,6 +313,34 @@
             "modified": "Modificado",
             "deleted": "Eliminado"
         }
+    },
+    "ignorePatterns": {
+        "title": "Patrones de exclusión",
+        "section": "Filtros de instantánea",
+        "description": "Un patrón glob por línea. Los archivos coincidentes se excluyen de todas las instantáneas futuras.",
+        "placeholder": "p. ej.\nnode_modules/**\n.git\n*.log\ndist/**",
+        "save": "Guardar patrones",
+        "saving": "Guardando...",
+        "saved": "Patrones guardados",
+        "error": "No se pudieron guardar los patrones"
+    },
+    "deploy": {
+        "button": "Desplegar {count} archivo(s)",
+        "selectAll": "Seleccionar todo",
+        "deselectAll": "Deseleccionar todo",
+        "modalTitle": "Desplegando cambios",
+        "statusPending": "Pendiente",
+        "statusTransferring": "Transfiriendo...",
+        "statusDone": "Listo",
+        "statusError": "Error",
+        "statusSkipped": "Omitido",
+        "summary": "{transferred} transferidos, {failed} fallidos",
+        "close": "Cerrar",
+        "inProgress": "Desplegando...",
+        "direction": "{source} → {target}",
+        "noSelection": "Selecciona archivos para desplegar",
+        "missingBinding": "El entorno no tiene enlace configurado",
+        "errorTitle": "Error en el despliegue"
     },
     "actions": {
         "expandFolder": "Expandir carpeta",

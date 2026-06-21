@@ -9,16 +9,30 @@
                 <h3 class="text-sm font-semibold text-(--app-text)">{{ t('diff.title') }}</h3>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.11em]">
-                <span
-                    class="rounded-full border border-(--status-added-border) bg-(--status-added-bg) px-2 py-0.5 text-(--status-added-text)">{{
-                        t('diff.added', { count: summaryCounts.added }) }}</span>
-                <span
-                    class="rounded-full border border-(--status-modified-border) bg-(--status-modified-bg) px-2 py-0.5 text-(--status-modified-text)">{{
-                        t('diff.modified', { count: summaryCounts.modified }) }}</span>
-                <span
-                    class="rounded-full border border-(--status-deleted-border) bg-(--status-deleted-bg) px-2 py-0.5 text-(--status-deleted-text)">{{
-                        t('diff.deleted', { count: summaryCounts.deleted }) }}</span>
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.11em]">
+                    <span
+                        class="rounded-full border border-(--status-added-border) bg-(--status-added-bg) px-2 py-0.5 text-(--status-added-text)">{{
+                            t('diff.added', { count: summaryCounts.added }) }}</span>
+                    <span
+                        class="rounded-full border border-(--status-modified-border) bg-(--status-modified-bg) px-2 py-0.5 text-(--status-modified-text)">{{
+                            t('diff.modified', { count: summaryCounts.modified }) }}</span>
+                    <span
+                        class="rounded-full border border-(--status-deleted-border) bg-(--status-deleted-bg) px-2 py-0.5 text-(--status-deleted-text)">{{
+                            t('diff.deleted', { count: summaryCounts.deleted }) }}</span>
+                </div>
+
+                <button type="button"
+                    class="text-xs text-(--app-muted) hover:text-(--app-text) transition"
+                    @click="toggleSelectAll">
+                    {{ allSelected ? t('deploy.deselectAll') : t('deploy.selectAll') }}
+                </button>
+
+                <button v-if="selectedFiles.size > 0" type="button"
+                    class="inline-flex items-center gap-2 rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                    @click="emit('deploy', Array.from(selectedFiles))">
+                    ↑ {{ t('deploy.button', { count: selectedFiles.size }) }}
+                </button>
             </div>
         </header>
 
@@ -29,7 +43,9 @@
 
         <ul v-else class="space-y-1">
             <EnvironmentDiffTreeNode v-for="node in treeNodes" :key="node.key" :node="node"
-                :expanded-state="expandedState" @toggle-folder="toggleFolder" />
+                :expanded-state="expandedState" :selected-files="selectedFiles"
+                @toggle-folder="toggleFolder"
+                @toggle-file="toggleFile" />
         </ul>
     </section>
 </template>
@@ -57,9 +73,14 @@ const props = withDefaults(
     },
 );
 
+const emit = defineEmits<{
+    (event: 'deploy', filePaths: string[]): void;
+}>();
+
 const { t } = useI18n({ useScope: 'global' });
 
 const expandedState = ref<Record<string, boolean>>({ '/': true });
+const selectedFiles = ref<Set<string>>(new Set());
 
 const summaryCounts = computed<StatusCounts>(() => ({
     added: props.result.summary.comparisonStats.added,
@@ -68,6 +89,17 @@ const summaryCounts = computed<StatusCounts>(() => ({
 }));
 
 const treeNodes = computed<DiffTreeNode[]>(() => buildDiffTree(props.result.files));
+
+const allChangedFilePaths = computed<string[]>(() => {
+    const paths: string[] = [];
+    collectFilePaths(treeNodes.value, paths);
+    return paths;
+});
+
+const allSelected = computed<boolean>(() =>
+    allChangedFilePaths.value.length > 0 &&
+    allChangedFilePaths.value.every((p) => selectedFiles.value.has(p)),
+);
 
 watch(
     treeNodes,
@@ -80,6 +112,7 @@ watch(
         }
 
         expandedState.value = nextState;
+        selectedFiles.value = new Set();
     },
     { immediate: true },
 );
@@ -89,6 +122,34 @@ function toggleFolder(folderPath: string): void {
         ...expandedState.value,
         [folderPath]: !(expandedState.value[folderPath] ?? false),
     };
+}
+
+function toggleFile(filePath: string): void {
+    const next = new Set(selectedFiles.value);
+    if (next.has(filePath)) {
+        next.delete(filePath);
+    } else {
+        next.add(filePath);
+    }
+    selectedFiles.value = next;
+}
+
+function toggleSelectAll(): void {
+    if (allSelected.value) {
+        selectedFiles.value = new Set();
+    } else {
+        selectedFiles.value = new Set(allChangedFilePaths.value);
+    }
+}
+
+function collectFilePaths(nodes: DiffTreeNode[], output: string[]): void {
+    for (const node of nodes) {
+        if (node.type === 'file') {
+            output.push(node.path);
+        } else {
+            collectFilePaths(node.children, output);
+        }
+    }
 }
 
 function buildDiffTree(files: ComparisonInput['files']): DiffTreeNode[] {

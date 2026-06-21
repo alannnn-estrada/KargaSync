@@ -17,7 +17,7 @@
                         <button type="button"
                             class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-2 text-sm font-medium text-(--app-text) transition hover:border-(--app-accent) hover:text-(--app-accent)"
                             @click="onClose">
-                            {{ t('actions.cancel') }}
+                            <XIcon name="x" class="h-4 w-4" />
                         </button>
                     </div>
                 </header>
@@ -59,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+import { XIcon } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 

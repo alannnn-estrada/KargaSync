@@ -290,6 +290,8 @@
                                 <p v-else class="rounded-xl border border-dashed border-(--app-border) bg-(--app-elevated) px-3 py-4 text-sm text-(--app-muted)">{{ t('project.noEnvironmentsConfigured') }}</p>
                             </div>
                         </article>
+
+                        <IgnorePatternsPanel :project-id="selectedProjectId" />
                     </div>
 
                     <div v-else
@@ -409,7 +411,7 @@
                     </article>
 
                     <EnvironmentDiffTree v-if="comparisonResults" class="mt-4" :result="comparisonResults"
-                        :initially-expanded-depth="2" />
+                        :initially-expanded-depth="2" @deploy="handleDeploy" />
 
                     <article v-else
                         class="mt-4 rounded-2xl border border-dashed border-(--app-border) bg-(--app-elevated) px-5 py-8 text-sm text-(--app-muted)">
@@ -422,6 +424,14 @@
     <EnvironmentBindingModal :visible="bindingModal.visible" :environment="bindingModal.environment" :servers="servers"
         :selectedServer="bindingModal.selectedServer" :remotePath="bindingModal.remotePath" @close="closeBindingModal"
         @save="onBindingSave" />
+
+    <DeployProgressModal
+        :visible="deployVisible"
+        :files="deployFiles"
+        :source-label="comparisonResults?.summary.sourceSnapshot.environmentName ?? ''"
+        :target-label="comparisonResults?.summary.targetSnapshot.environmentName ?? ''"
+        :progress="deployProgress"
+        @close="closeDeployModal" />
 
     <!-- Edit Modal for renaming projects/environments -->
     <div v-if="editModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="editModal.visible = false">
@@ -444,14 +454,16 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
 import EnvironmentBindingModal from '../components/EnvironmentBindingModal.vue';
 
 import { useApi } from '../composables';
-import { EnvironmentDiffTree } from '../components';
+import { EnvironmentDiffTree, IgnorePatternsPanel, DeployProgressModal } from '../components';
 import { useProjectComparisonStore } from '../stores';
 import type { GetAllProjectsResponseDto } from '../services';
-import { scanLocalSnapshot, scanRemoteSnapshot, getLatestSnapshot } from '../services/api';
+import { scanLocalSnapshot, scanRemoteSnapshot, getLatestSnapshot, deployBatch, onDeployProgress } from '../services/api';
+import type { DeployProgressEvent } from '../../shared/ipc/contracts';
 import { formatUiErrorMessage } from '../i18n';
 
 const { createProject, getProjects, compareEnvironments, listServers, listEnvironments, createEnvironment, assignEnvironmentBinding, listEnvironmentBindings, updateEnvironment, deleteEnvironment, updateProject, deleteProject } = useApi();
@@ -476,10 +488,13 @@ const loadingServers = ref(false);
 const snapshotStates = ref<Record<number, { loading: boolean; error: string; snapshot: any | null }>>({});
 const bindingModal = ref({ visible: false, environment: null as any, selectedServer: null as number | null, remotePath: '' });
 
-const projects = projectStore.projects;
-const selectedProject = projectStore.selectedProject;
-const selectedProjectId = projectStore.selectedProjectId;
-const comparisonResults = projectStore.comparisonResults;
+const { projects, selectedProject, selectedProjectId, comparisonResults } = storeToRefs(projectStore);
+
+const deployVisible = ref(false);
+const deployFiles = ref<string[]>([]);
+const deployProgress = ref<Map<string, DeployProgressEvent>>(new Map());
+const deployDone = ref(false);
+
 const canCreateProject = computed(() => newProjectName.value.trim().length > 0);
 const canCompare = computed(() => (
     selectedProjectId.value !== null
@@ -814,6 +829,39 @@ async function onBindingSave(payload: { environmentId: number; serverId: number;
     } finally {
         closeBindingModal();
     }
+}
+
+async function handleDeploy(filePaths: string[]): Promise<void> {
+    const result = comparisonResults.value;
+    if (!result) return;
+
+    deployFiles.value = filePaths;
+    deployProgress.value = new Map();
+    deployDone.value = false;
+    deployVisible.value = true;
+
+    const unsubscribe = onDeployProgress((evt) => {
+        const next = new Map(deployProgress.value);
+        next.set(evt.file, evt);
+        deployProgress.value = next;
+    });
+
+    try {
+        await deployBatch({
+            sourceEnvironmentId: result.summary.sourceSnapshot.environmentId,
+            targetEnvironmentId: result.summary.targetSnapshot.environmentId,
+            filePaths,
+        });
+    } catch (_) {
+        // errors reported per-file via progress events
+    } finally {
+        unsubscribe();
+        deployDone.value = true;
+    }
+}
+
+function closeDeployModal(): void {
+    deployVisible.value = false;
 }
 
 watch(selectedProjectId, () => {

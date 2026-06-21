@@ -36,6 +36,9 @@ export const IPC_CHANNELS = {
     environmentsDelete: 'environments:delete',
     environmentBindingsAssign: 'environmentBindings:assign',
     environmentBindingsList: 'environmentBindings:list',
+    ignorePatternsList: 'ignorePatterns:list',
+    ignorePatternsSave: 'ignorePatterns:save',
+    deployBatch: 'deploy:batch',
     versionsList: 'versions:list',
     versionsStart: 'versions:start',
     versionsBackupFile: 'versions:backupFile',
@@ -44,6 +47,30 @@ export const IPC_CHANNELS = {
     versionsRollback: 'versions:rollback',
     versionsDelete: 'versions:delete',
 } as const;
+
+export const DEPLOY_CHANNELS = {
+    progress: 'deploy:progress',
+} as const;
+
+export interface DeployBatchInput {
+    sourceEnvironmentId: number;
+    targetEnvironmentId: number;
+    filePaths: string[];
+    skipDeleted?: boolean;
+}
+
+export interface DeployProgressEvent {
+    file: string;
+    status: 'pending' | 'transferring' | 'done' | 'error' | 'skipped';
+    error?: string;
+}
+
+export interface DeployBatchResult {
+    transferred: number;
+    skipped: number;
+    failed: number;
+    errors: Array<{ file: string; error: string }>;
+}
 
 export const LOCAL_FILE_CHANNELS = {
     defaultRoot: 'localFiles:defaultRoot',
@@ -167,6 +194,15 @@ export interface RendererApi {
     // Environment bindings
     assignEnvironmentBinding: (input: import('../dto').AssignEnvironmentBindingRequestDTO) => Promise<EnvironmentBindingDto>;
     listEnvironmentBindings: (environmentId: number) => Promise<GetEnvironmentBindingsResponseDto>;
+
+    // Ignore patterns
+    listIgnorePatterns: (projectId: number) => Promise<string[]>;
+    saveIgnorePatterns: (projectId: number, patterns: string[]) => Promise<void>;
+
+    // Deploy
+    deployBatch: (input: DeployBatchInput) => Promise<DeployBatchResult>;
+    onDeployProgress: (callback: (event: DeployProgressEvent) => void) => () => void;
+
     getLocalFilesDefaultRoot: () => Promise<string>;
     chooseLocalFilesRoot: () => Promise<string | null>;
     listLocalFiles: (directoryPath: string) => Promise<RemoteFileEntryDto[]>;

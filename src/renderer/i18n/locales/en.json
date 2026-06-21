@@ -161,6 +161,7 @@
         "newFilePrompt": "File name",
         "renamePrompt": "New name",
         "openRemoteFileConfirm": "Download and open this file with the default system app?",
+        "redownloadConfirm": "\"{name}\" is already open for editing. Re-download from the server? Your local changes will be discarded.",
         "editRemoteTitle": "Editing: {name}",
         "editorPlaceholder": "Remote file content",
         "saveChanges": "Save changes",
@@ -312,6 +313,34 @@
             "modified": "Modified",
             "deleted": "Deleted"
         }
+    },
+    "ignorePatterns": {
+        "title": "Ignore patterns",
+        "section": "Snapshot filters",
+        "description": "One glob pattern per line. Matched files are excluded from all future snapshots.",
+        "placeholder": "e.g.\nnode_modules/**\n.git\n*.log\ndist/**",
+        "save": "Save patterns",
+        "saving": "Saving...",
+        "saved": "Patterns saved",
+        "error": "Failed to save patterns"
+    },
+    "deploy": {
+        "button": "Deploy {count} file(s)",
+        "selectAll": "Select all",
+        "deselectAll": "Deselect all",
+        "modalTitle": "Deploying changes",
+        "statusPending": "Pending",
+        "statusTransferring": "Transferring...",
+        "statusDone": "Done",
+        "statusError": "Error",
+        "statusSkipped": "Skipped",
+        "summary": "{transferred} transferred, {failed} failed",
+        "close": "Close",
+        "inProgress": "Deploying...",
+        "direction": "{source} → {target}",
+        "noSelection": "Select files to deploy",
+        "missingBinding": "Environment has no binding configured",
+        "errorTitle": "Deploy failed"
     },
     "actions": {
         "expandFolder": "Expand folder",

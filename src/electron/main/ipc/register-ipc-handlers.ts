@@ -29,9 +29,14 @@ import {
     IPC_CHANNELS,
     LOCAL_FILE_CHANNELS,
     REMOTE_FILE_CHANNELS,
+    DEPLOY_CHANNELS,
     type AppMenuAnchorDto,
+    type DeployBatchInput,
+    type DeployBatchResult,
+    type DeployProgressEvent,
 } from '../../../shared/ipc/contracts';
 import { toggleAppMenu } from '../services/app-menu';
+import { shouldIgnore as shouldIgnorePattern } from '../../../core/file-scanner/ignore-matcher';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -109,6 +114,17 @@ function createFtpClient(): FtpClient {
 
 function normalizeFtpRemotePath(remotePath: string): string {
     return remotePath.replace(/^\/+/, '') || '.';
+}
+
+function deployNormalizePosixPath(basePath: string, relativePath: string): string {
+    const base = basePath.endsWith('/') ? basePath : basePath + '/';
+    const rel = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+    return base + rel;
+}
+
+function deployRelativeToLocal(relativePath: string): string {
+    const stripped = relativePath.replace(/^\/+/, '');
+    return stripped.replace(/\//g, path.sep);
 }
 
 function toProjectDto(project: ProjectRow): ProjectDTO {
@@ -290,6 +306,9 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         IPC_CHANNELS.versionsAbort,
         IPC_CHANNELS.versionsRollback,
         IPC_CHANNELS.versionsDelete,
+        IPC_CHANNELS.ignorePatternsList,
+        IPC_CHANNELS.ignorePatternsSave,
+        IPC_CHANNELS.deployBatch,
     ].forEach((channel) => ipcMain.removeHandler(channel));
 
     ipcMain.handle(LOCAL_FILE_CHANNELS.defaultRoot, async () => {
@@ -413,10 +432,28 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
     ipcMain.handle(
         IPC_CHANNELS.snapshotsCreate,
         async (_event, input: CreateSnapshotRequestDTO) => {
-            const snapshot = createSnapshotCommand.execute(toCreateSnapshotInput(input));
+            const patterns = database.projectManager.listIgnorePatterns(input.projectId);
+            let filteredInput = input;
+
+            if (patterns.length > 0) {
+                filteredInput = {
+                    ...input,
+                    files: input.files.filter((f) => !shouldIgnorePattern(f.relativePath, patterns)),
+                };
+            }
+
+            const snapshot = createSnapshotCommand.execute(toCreateSnapshotInput(filteredInput));
             return toSnapshotDto(snapshot);
         },
     );
+
+    ipcMain.handle(IPC_CHANNELS.ignorePatternsList, async (_event, projectId: number) => {
+        return database.projectManager.listIgnorePatterns(projectId);
+    });
+
+    ipcMain.handle(IPC_CHANNELS.ignorePatternsSave, async (_event, projectId: number, patterns: string[]) => {
+        database.projectManager.setIgnorePatterns(projectId, patterns);
+    });
 
     ipcMain.handle(IPC_CHANNELS.settingsGet, async () => toSettingsDto(database.settings.getSettings()));
 
@@ -1064,6 +1101,130 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         }
     });
 
+    ipcMain.handle(IPC_CHANNELS.deployBatch, async (event, input: DeployBatchInput) => {
+        const result: DeployBatchResult = { transferred: 0, skipped: 0, failed: 0, errors: [] };
+
+        const sourceBindings = database.projectManager.listEnvironmentBindings(input.sourceEnvironmentId);
+        const targetBindings = database.projectManager.listEnvironmentBindings(input.targetEnvironmentId);
+        const sourceBind = sourceBindings[0];
+        const targetBind = targetBindings[0];
+
+        if (!sourceBind || !targetBind) {
+            throw new Error('Missing binding for source or target environment');
+        }
+
+        const sendProgress = (data: DeployProgressEvent) => {
+            if (!event.sender.isDestroyed()) {
+                event.sender.send(DEPLOY_CHANNELS.progress, data);
+            }
+        };
+
+        for (const relativePath of input.filePaths) {
+            sendProgress({ file: relativePath, status: 'transferring' });
+            try {
+                let contentBase64: string;
+
+                if (sourceBind.bindingType === 'local' && sourceBind.localPath) {
+                    const fullPath = path.join(sourceBind.localPath, deployRelativeToLocal(relativePath));
+                    const buffer = await fs.readFile(fullPath);
+                    contentBase64 = buffer.toString('base64');
+                } else if (sourceBind.bindingType === 'remote' && sourceBind.serverId && sourceBind.remotePath) {
+                    const server = database.projectManager.getServer(sourceBind.serverId);
+                    if (!server) throw new Error(`Server #${sourceBind.serverId} not found`);
+                    const storedCredential = await database.credentials.getCredential(sourceBind.serverId);
+                    const credential = resolveRemoteCredential(storedCredential, undefined);
+                    const remoteFilePath = deployNormalizePosixPath(sourceBind.remotePath, relativePath);
+                    const tempPath = path.join(os.tmpdir(), `karga-deploy-${Date.now()}-${path.basename(relativePath)}`);
+
+                    if (server.protocol === 'sftp') {
+                        const sftp = new SftpClient();
+                        const connectOpts: Record<string, unknown> = { host: server.host, port: server.port, username: credential.username ?? server.username };
+                        if (server.authType === 'password') {
+                            connectOpts.password = credential.password;
+                        } else {
+                            connectOpts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
+                        }
+                        await withTimeout(sftp.connect(connectOpts as any), 'sftp connect');
+                        try {
+                            await withTimeout(sftp.fastGet(remoteFilePath, tempPath), 'sftp download');
+                        } finally {
+                            await sftp.end();
+                        }
+                    } else {
+                        const ftp = createFtpClient();
+                        await withTimeout(ftp.access({ host: normalizeFtpHost(server.host), port: server.port, user: credential.username ?? server.username, password: credential.password, secure: false }), 'ftp connect');
+                        try {
+                            await withTimeout(ftp.downloadTo(tempPath, normalizeFtpRemotePath(remoteFilePath)), 'ftp download');
+                        } finally {
+                            ftp.close();
+                        }
+                    }
+                    const buffer = await fs.readFile(tempPath);
+                    contentBase64 = buffer.toString('base64');
+                    await fs.unlink(tempPath).catch(() => {});
+                } else {
+                    throw new Error('Unsupported source binding type');
+                }
+
+                if (targetBind.bindingType === 'local' && targetBind.localPath) {
+                    const fullPath = path.join(targetBind.localPath, deployRelativeToLocal(relativePath));
+                    await fs.mkdir(path.dirname(fullPath), { recursive: true });
+                    await fs.writeFile(fullPath, Buffer.from(contentBase64, 'base64'));
+                } else if (targetBind.bindingType === 'remote' && targetBind.serverId && targetBind.remotePath) {
+                    const server = database.projectManager.getServer(targetBind.serverId);
+                    if (!server) throw new Error(`Server #${targetBind.serverId} not found`);
+                    const storedCredential = await database.credentials.getCredential(targetBind.serverId);
+                    const credential = resolveRemoteCredential(storedCredential, undefined);
+                    const remoteFilePath = deployNormalizePosixPath(targetBind.remotePath, relativePath);
+                    const dirPath = remoteFilePath.split('/').slice(0, -1).join('/');
+                    const contentBuffer = Buffer.from(contentBase64, 'base64');
+
+                    if (server.protocol === 'sftp') {
+                        const sftp = new SftpClient();
+                        const connectOpts: Record<string, unknown> = { host: server.host, port: server.port, username: credential.username ?? server.username };
+                        if (server.authType === 'password') {
+                            connectOpts.password = credential.password;
+                        } else {
+                            connectOpts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
+                        }
+                        await withTimeout(sftp.connect(connectOpts as any), 'sftp connect');
+                        try {
+                            if (dirPath) await sftp.mkdir(dirPath, true).catch(() => {});
+                            await withTimeout(sftp.put(contentBuffer, remoteFilePath), 'sftp upload');
+                        } finally {
+                            await sftp.end();
+                        }
+                    } else {
+                        const ftp = createFtpClient();
+                        await withTimeout(ftp.access({ host: normalizeFtpHost(server.host), port: server.port, user: credential.username ?? server.username, password: credential.password, secure: false }), 'ftp connect');
+                        try {
+                            if (dirPath) {
+                                await ftp.ensureDir(normalizeFtpRemotePath(dirPath));
+                                await ftp.cd('/');
+                            }
+                            const { Readable } = await import('node:stream');
+                            await withTimeout(ftp.uploadFrom(Readable.from(contentBuffer), normalizeFtpRemotePath(remoteFilePath)), 'ftp upload');
+                        } finally {
+                            ftp.close();
+                        }
+                    }
+                } else {
+                    throw new Error('Unsupported target binding type');
+                }
+
+                sendProgress({ file: relativePath, status: 'done' });
+                result.transferred++;
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                sendProgress({ file: relativePath, status: 'error', error: msg });
+                result.errors.push({ file: relativePath, error: msg });
+                result.failed++;
+            }
+        }
+
+        return result;
+    });
+
     ipcMain.handle(REMOTE_FILE_CHANNELS.openExternal, async (_event, localPath: string) => {
         const { shell } = await import('electron');
         const { spawn } = await import('node:child_process');
@@ -1167,7 +1328,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         const crypto = await import('node:crypto');
         const serverRow = database.projectManager.getServer(input.serverId);
         if (!serverRow) throw new Error(`Server not found: ${input.serverId}`);
-        const credential = database.credentials.getCredential(serverRow.credentialRef);
+        const credential = await database.credentials.getCredential(input.serverId);
 
         const files: import('../../../core/application/commands/create-snapshot').SnapshotFileInput[] = [];
 

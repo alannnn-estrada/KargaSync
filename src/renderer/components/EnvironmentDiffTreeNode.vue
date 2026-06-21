@@ -14,7 +14,13 @@
                     <path d="M6 4l4 4-4 4"/>
                 </svg>
             </button>
-            <span v-else class="inline-block h-5 w-5 shrink-0" />
+            <template v-else>
+                <input type="checkbox"
+                    class="h-3.5 w-3.5 shrink-0 cursor-pointer"
+                    :checked="isSelected"
+                    @click.stop
+                    @change="emit('toggle-file', node.path)" />
+            </template>
 
             <span class="shrink-0 text-sm leading-none" :class="node.type === 'folder' ? 'text-(--app-muted)' : fileIconClass">
                 {{ node.type === 'folder' ? (isExpanded ? '📂' : '📁') : fileStatusIcon }}
@@ -45,7 +51,9 @@
 
         <ul v-if="node.type === 'folder' && isExpanded" class="ml-3 border-l border-(--app-border) pl-2">
             <EnvironmentDiffTreeNode v-for="child in node.children" :key="child.key" :node="child"
-                :expanded-state="expandedState" @toggle-folder="emit('toggle-folder', $event)" />
+                :expanded-state="expandedState" :selected-files="selectedFiles"
+                @toggle-folder="emit('toggle-folder', $event)"
+                @toggle-file="emit('toggle-file', $event)" />
         </ul>
     </li>
 </template>
@@ -59,10 +67,12 @@ import type { DiffFileStatus, DiffTreeNode } from './environment-diff-tree-types
 const props = defineProps<{
     node: DiffTreeNode;
     expandedState: Record<string, boolean>;
+    selectedFiles: Set<string>;
 }>();
 
 const emit = defineEmits<{
     (event: 'toggle-folder', folderPath: string): void;
+    (event: 'toggle-file', filePath: string): void;
 }>();
 
 const { t } = useI18n({ useScope: 'global' });
@@ -73,6 +83,13 @@ const isExpanded = computed(() => {
     }
 
     return props.expandedState[props.node.path] ?? false;
+});
+
+const isSelected = computed(() => {
+    if (props.node.type !== 'file') {
+        return false;
+    }
+    return props.selectedFiles.has(props.node.path);
 });
 
 const fileStatusIcon = computed(() => {

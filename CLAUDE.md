@@ -145,5 +145,11 @@ The versioning system works as a session: `versionsStart` creates a running sess
 ### PPK key format
 PPK files detected by `isPpkContent()` (prefix `PuTTY-User-Key-File-`). Converted to PEM via pure Node.js JWK import (`crypto.createPrivateKey({ format: 'jwk' })`). Encrypted PPK (with passphrase) throws — not supported. `resolveSftpPrivateKey()` helper in register-ipc-handlers.ts wraps this transparently. Key file chooser (`chooseKeyFile` IPC) reads the file content and returns it as string — the credential store holds the full key content, not a file path.
 
+### openRemoteFileForEdit checked existing session AFTER download — FIXED
+The existing-session check (and `window.confirm` re-download prompt) was placed AFTER `downloadRemoteFileIntoLocalPath` and `openRemoteFileExternal`, so the file was already overwritten locally and opened before asking. Moved the check to before `runTransferOperation` so the user can cancel without triggering any download.
+
+### Pinia 3 auto-unwraps refs/computed in store proxy — use storeToRefs — FIXED
+Pinia 3 wraps setup stores in `reactive()`, which auto-unwraps nested refs and computed refs. So `projectStore.selectedProjectId` returns the raw value (e.g. `null`) NOT a `ComputedRef`. Doing `const selectedProjectId = projectStore.selectedProjectId` captures a stale primitive — `.value` on it is `undefined`, watches on it are inert, and the variable never updates when the store changes. Fix: always use `storeToRefs(projectStore)` to extract reactive refs: `const { projects, selectedProject, selectedProjectId } = storeToRefs(projectStore)`. The `environments:create` error "Provided value cannot be bound to SQLite parameter 1" was caused by `selectedProjectId.value` returning `undefined` (from a captured `null`), which `node:sqlite` cannot bind.
+
 ### Sidebar collapsed overflow — FIXED
 When `isSidebarCollapsed=true`, the old markup tried to reuse expanded layout with conditional Tailwind classes. Two bugs: (1) `px-2.5 py-2.5 md:w-11` on nav links — 32px icon + 20px padding = 52px but w-11=44px; (2) two `h-9 w-9` buttons side by side (76px) in 44px content area. Fixed by using separate `<template v-if>` blocks for expanded vs collapsed header, and `justify-center p-2 w-full` on nav items in collapsed mode.

@@ -125,3 +125,14 @@ CREATE TABLE IF NOT EXISTS backups (
 
 CREATE INDEX IF NOT EXISTS idx_backups_project_started_at
   ON backups(project_id, started_at DESC);
+
+CREATE TABLE IF NOT EXISTS ignore_patterns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  pattern TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(project_id, pattern)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ignore_patterns_project_id
+  ON ignore_patterns(project_id);

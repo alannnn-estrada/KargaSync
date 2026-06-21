@@ -193,6 +193,34 @@ const applyVersionsMigration = (db: SqliteDatabase) => {
     }
 };
 
+const applyIgnorePatternsMigration = (db: SqliteDatabase) => {
+    const hasTable = db
+        .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'ignore_patterns' LIMIT 1")
+        .get() as { '1': number } | undefined;
+
+    if (!hasTable) {
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS ignore_patterns (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+              pattern TEXT NOT NULL,
+              created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(project_id, pattern)
+            );
+            CREATE INDEX IF NOT EXISTS idx_ignore_patterns_project_id
+              ON ignore_patterns(project_id);
+        `);
+    }
+
+    const migrationApplied = db
+        .prepare('SELECT 1 FROM schema_migrations WHERE version = ? LIMIT 1')
+        .get(4) as { '1': number } | undefined;
+
+    if (!migrationApplied) {
+        db.prepare('INSERT INTO schema_migrations (version, name) VALUES (?, ?)').run(4, 'ignore_patterns');
+    }
+};
+
 export function initializeDatabase(options: InitializeDatabaseOptions): DatabaseHandle {
     ensureDirectory(options.filePath);
 
@@ -222,6 +250,7 @@ export function initializeDatabase(options: InitializeDatabaseOptions): Database
     recordInitialMigration(db);
     applyServerModelMigration(db);
     applyVersionsMigration(db);
+    applyIgnorePatternsMigration(db);
 
     const credentials = createCredentialManager({
         fallbackFilePath: path.join(path.dirname(options.filePath), 'credential-store.json'),

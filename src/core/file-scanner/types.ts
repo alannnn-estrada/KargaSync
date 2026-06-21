@@ -17,4 +17,5 @@ export interface FileProvider {
 
 export interface FileScannerOptions {
     hashAlgorithm?: string;
+    ignorePatterns?: string[];
 }

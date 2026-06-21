@@ -214,6 +214,18 @@ export const chooseKeyFile = () =>
 
 export type { VersionDto } from '../../shared/ipc/contracts';
 
+export const listIgnorePatterns = (projectId: number): Promise<string[]> =>
+    getRendererApi().listIgnorePatterns(projectId);
+
+export const saveIgnorePatterns = (projectId: number, patterns: string[]): Promise<void> =>
+    getRendererApi().saveIgnorePatterns(projectId, patterns);
+
+export const deployBatch = (input: import('../../shared/ipc/contracts').DeployBatchInput) =>
+    getRendererApi().deployBatch(input);
+
+export const onDeployProgress = (callback: (event: import('../../shared/ipc/contracts').DeployProgressEvent) => void) =>
+    getRendererApi().onDeployProgress(callback);
+
 export const localFilesService: LocalFilesApi = {
     getDefaultRoot: () => getRendererApi().getLocalFilesDefaultRoot(),
     chooseRoot: () => getRendererApi().chooseLocalFilesRoot(),

@@ -121,6 +121,8 @@ export interface ProjectManager {
     replaceEnvironmentBindings: (environmentId: number, bindings: EnvironmentBindingInput[]) => EnvironmentBindingRow[];
     listEnvironmentBindings: (environmentId: number) => EnvironmentBindingRow[];
     resolveRemoteBinding: (environmentId: number, input?: ResolveRemoteBindingInput) => ResolvedRemoteBinding;
+    listIgnorePatterns: (projectId: number) => string[];
+    setIgnorePatterns: (projectId: number, patterns: string[]) => void;
 }
 
 const normalizeRowid = (rowid: number | bigint): number =>
@@ -301,6 +303,14 @@ export function createProjectManager({ db, credentials }: ProjectManagerDependen
         );
     const deleteBindingsForEnvironment = db.prepare('DELETE FROM environment_bindings WHERE environment_id = ?');
     const listBindingsForEnvironment = createBindingByEnvironmentLookup(db);
+
+    const listIgnorePatternsStmt = db.prepare(
+        'SELECT pattern FROM ignore_patterns WHERE project_id = ? ORDER BY id ASC',
+    );
+    const deleteIgnorePatternsStmt = db.prepare('DELETE FROM ignore_patterns WHERE project_id = ?');
+    const insertIgnorePatternStmt = db.prepare(
+        'INSERT OR IGNORE INTO ignore_patterns (project_id, pattern) VALUES (@projectId, @pattern)',
+    );
 
     const createProject = (input: CreateProjectInput): ProjectRow => {
         const result = asRunResult(insertProject.run({ name: input.name, rootPath: input.rootPath ?? null }));
@@ -612,5 +622,20 @@ export function createProjectManager({ db, credentials }: ProjectManagerDependen
         replaceEnvironmentBindings,
         listEnvironmentBindings,
         resolveRemoteBinding,
+        listIgnorePatterns: (projectId: number): string[] => {
+            const rows = listIgnorePatternsStmt.all(projectId) as Array<{ pattern: string }>;
+            return rows.map((r) => r.pattern);
+        },
+        setIgnorePatterns: (projectId: number, patterns: string[]): void => {
+            db.transaction((nextPatterns: string[]) => {
+                deleteIgnorePatternsStmt.run(projectId);
+                for (const pattern of nextPatterns) {
+                    const trimmed = pattern.trim();
+                    if (trimmed.length > 0) {
+                        insertIgnorePatternStmt.run({ projectId, pattern: trimmed });
+                    }
+                }
+            })(patterns);
+        },
     };
 }

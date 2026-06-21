@@ -1,7 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-import { IPC_CHANNELS, LOCAL_FILE_CHANNELS, type RendererApi } from './shared/ipc/contracts';
-import { REMOTE_FILE_CHANNELS } from './shared/ipc/contracts';
+import { IPC_CHANNELS, LOCAL_FILE_CHANNELS, REMOTE_FILE_CHANNELS, DEPLOY_CHANNELS, type RendererApi, type DeployProgressEvent } from './shared/ipc/contracts';
 
 const api: RendererApi = {
     getAllProjects: () => ipcRenderer.invoke(IPC_CHANNELS.projectsGetAll),
@@ -55,6 +54,19 @@ const api: RendererApi = {
     createRemoteFile: (serverId: number, remotePath: string, credentialOverride?: string | { username?: string; password?: string }) => ipcRenderer.invoke(REMOTE_FILE_CHANNELS.createFile, serverId, remotePath, credentialOverride),
     renameRemotePath: (serverId: number, sourcePath: string, targetPath: string, credentialOverride?: string | { username?: string; password?: string }) => ipcRenderer.invoke(REMOTE_FILE_CHANNELS.rename, serverId, sourcePath, targetPath, credentialOverride),
     openRemoteFileExternal: (localPath: string) => ipcRenderer.invoke(REMOTE_FILE_CHANNELS.openExternal, localPath),
+
+    // Ignore patterns
+    listIgnorePatterns: (projectId: number) => ipcRenderer.invoke(IPC_CHANNELS.ignorePatternsList, projectId),
+    saveIgnorePatterns: (projectId: number, patterns: string[]) => ipcRenderer.invoke(IPC_CHANNELS.ignorePatternsSave, projectId, patterns),
+
+    // Deploy
+    deployBatch: (input) => ipcRenderer.invoke(IPC_CHANNELS.deployBatch, input),
+    onDeployProgress: (callback) => {
+        const handler = (_event: Electron.IpcRendererEvent, data: DeployProgressEvent) => callback(data);
+        ipcRenderer.on(DEPLOY_CHANNELS.progress, handler);
+        return () => ipcRenderer.removeListener(DEPLOY_CHANNELS.progress, handler);
+    },
+
     // Versions
     listVersions: (serverId) => ipcRenderer.invoke(IPC_CHANNELS.versionsList, serverId),
     startVersionSession: (input) => ipcRenderer.invoke(IPC_CHANNELS.versionsStart, input),

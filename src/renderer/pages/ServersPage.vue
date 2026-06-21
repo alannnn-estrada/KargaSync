@@ -73,13 +73,13 @@
                         <label class="block">
                             <span class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">{{
                                 t('servers.secret') }}</span>
-                            <div class="mt-2 flex gap-2">
+                            <div class="mt-2 flex flex-wrap gap-2">
                                 <input v-model="form.secret" :type="form.authType === 'password' ? 'password' : 'text'"
                                     class="min-w-0 flex-1 rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
                                     :placeholder="form.authType === 'password' ? t('servers.passwordPlaceholder') : t('servers.keyPlaceholder')"
                                     :disabled="isSaving" />
                                 <button v-if="form.authType === 'key'" type="button"
-                                    class="shrink-0 rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-2 text-xs font-semibold text-(--app-text) transition hover:border-(--app-accent)"
+                                    class="w-full shrink-0 rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-2 text-xs font-semibold text-(--app-text) transition hover:border-(--app-accent) sm:w-auto"
                                     :disabled="isSaving" @click="handleChooseKeyFile">
                                     {{ t('servers.chooseKeyFile') }}
                                 </button>

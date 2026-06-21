@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import type { Readable } from 'node:stream';
 
 import type { FileEntry, FileProvider, FileRecord, FileScannerOptions } from './types';
+import { shouldIgnore } from './ignore-matcher';
 
 const DEFAULT_HASH_ALGORITHM = 'sha256';
 
@@ -35,16 +36,22 @@ const scanEntry = async (provider: FileProvider, entry: FileEntry, hashAlgorithm
 
 export class FileScanner {
     private readonly hashAlgorithm: string;
+    private readonly ignorePatterns: string[];
 
     constructor(
         private readonly provider: FileProvider,
         options: FileScannerOptions = {},
     ) {
         this.hashAlgorithm = options.hashAlgorithm ?? DEFAULT_HASH_ALGORITHM;
+        this.ignorePatterns = options.ignorePatterns ?? [];
     }
 
     async *scan(): AsyncGenerator<FileRecord> {
         for await (const entry of this.provider.iterateFiles()) {
+            if (this.ignorePatterns.length > 0 && shouldIgnore(entry.path, this.ignorePatterns)) {
+                continue;
+            }
+
             yield await scanEntry(this.provider, entry, this.hashAlgorithm);
         }
     }

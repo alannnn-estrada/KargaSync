@@ -11,8 +11,9 @@
         <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
             <article
                 class="relative rounded-2xl border border-(--app-border) bg-(--app-elevated) p-4 shadow-(--app-shadow-sm)"
-                :class="activeExplorerPane === 'local' ? 'ring-1 ring-(--app-accent)/60' : 'ring-1 ring-transparent'"
-                @click="setActiveExplorerPane('local')" @contextmenu.prevent="openContextMenu($event, 'local')">
+                :class="(activeExplorerPane === 'local' || isLocalDropActive) ? 'ring-1 ring-(--app-accent)/60' : 'ring-1 ring-transparent'"
+                @click="setActiveExplorerPane('local')" @contextmenu.prevent="openContextMenu($event, 'local')"
+                @dragover.prevent="handleLocalDragOver" @dragleave="handleLocalDragLeave" @drop.prevent="handleLocalDrop">
                 <p class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
                     t('servers.localFiles') }}</p>
 
@@ -159,9 +160,9 @@
                                 isLocalEntrySelected(entry.path)
                                     ? 'bg-(--app-accent)/10 ring-1 ring-(--app-accent)/25'
                                     : 'hover:bg-(--app-muted-surface)',
-                                entry.isDirectory ? 'cursor-pointer' : 'cursor-grab'
+                                'cursor-grab'
                             ]"
-                            :draggable="!entry.isDirectory" @click="handleLocalEntryClick(entry, $event)"
+                            draggable="true" @click="handleLocalEntryClick(entry, $event)"
                             @dblclick="handleLocalEntryDoubleClick(entry)" @dragstart="handleLocalDragStart(entry, $event)"
                             @dragend="handleLocalDragEnd" @contextmenu.prevent.stop="handleLocalContextMenu($event, entry)">
                             <svg v-if="entry.isDirectory" class="h-4 w-4 text-amber-400" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 4C1.5 3.17 2.17 2.5 3 2.5h3.086a1 1 0 0 1 .707.293L8.207 4.207A1 1 0 0 0 8.914 4.5H13c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5H3c-.83 0-1.5-.67-1.5-1.5V4Z"/></svg>
@@ -456,7 +457,9 @@
                                     : 'hover:bg-(--app-muted-surface)',
                                 entry.isDirectory ? 'cursor-pointer' : 'cursor-default'
                             ]"
+                            draggable="true"
                             @click="handleRemoteEntryClick(entry, $event)" @dblclick="handleRemoteEntryDoubleClick(entry)"
+                            @dragstart="handleRemoteDragStart(entry, $event)" @dragend="handleRemoteDragEnd"
                             @contextmenu.prevent.stop="handleRemoteContextMenu($event, entry)">
                             <svg v-if="entry.isDirectory" class="h-4 w-4 text-amber-400" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 4C1.5 3.17 2.17 2.5 3 2.5h3.086a1 1 0 0 1 .707.293L8.207 4.207A1 1 0 0 0 8.914 4.5H13c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5H3c-.83 0-1.5-.67-1.5-1.5V4Z"/></svg>
                             <svg v-else class="h-4 w-4 shrink-0" :class="getFileIconColor(entry.name)" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 1.5h6l3 3v9.5a.5.5 0 0 1-.5.5h-8.5a.5.5 0 0 1-.5-.5V2a.5.5 0 0 1 .5-.5Z"/><path d="M9.5 1.5v3.5h3"/></svg>
@@ -1014,6 +1017,7 @@ const remoteClipboard = ref<{ mode: 'copy' | 'cut'; entries: ExplorerEntry[]; se
 const isLocalLoading = ref(false);
 const isRemoteLoading = ref(false);
 const isRemoteDropActive = ref(false);
+const isLocalDropActive = ref(false);
 const localErrorMessage = ref('');
 const remoteErrorMessage = ref('');
 const needsPassword = ref(false);
@@ -1230,7 +1234,7 @@ const selectedRemoteFileLabel = computed(() => {
 
     return selectedRemoteEntries.value[0].path;
 });
-const canUploadSelectedLocalFile = computed(() => Boolean(selectedLocalFile.value));
+const canUploadSelectedLocalFile = computed(() => selectedLocalEntries.value.length > 0 && Boolean(selectedServerId.value));
 const canUploadSelectedRemoteFile = computed(() => Boolean(selectedRemoteFile.value));
 const canGoLocalParent = computed(() => Boolean(localPath.value && getLocalParentPath(localPath.value) !== localPath.value));
 const canGoRemoteParent = computed(() => remotePath.value !== '/');
@@ -2181,6 +2185,56 @@ async function deleteSelectedLocalEntries(): Promise<void> {
     }
 }
 
+function extendLocalSelectionByKey(direction: 'up' | 'down'): void {
+    const entries = displayedLocalEntries.value;
+    if (entries.length === 0) return;
+    const anchorPath = localSelectionAnchorPath.value;
+    const anchorIdx = anchorPath ? entries.findIndex((e) => e.path === anchorPath) : -1;
+    const currentSet = new Set(selectedLocalEntries.value.map((e) => e.path));
+    if (currentSet.size === 0) {
+        const idx = direction === 'down' ? 0 : entries.length - 1;
+        setLocalSelection([entries[idx].path], entries[idx].path);
+        return;
+    }
+    const selectedIndices = entries.map((e, i) => (currentSet.has(e.path) ? i : -1)).filter((i) => i !== -1);
+    const minIdx = selectedIndices[0];
+    const maxIdx = selectedIndices[selectedIndices.length - 1];
+    let cursorIdx = anchorIdx === minIdx ? maxIdx : anchorIdx === maxIdx ? minIdx : direction === 'down' ? maxIdx : minIdx;
+    const newCursorIdx = direction === 'down' ? Math.min(cursorIdx + 1, entries.length - 1) : Math.max(cursorIdx - 1, 0);
+    const effectiveAnchor = anchorIdx !== -1 ? anchorIdx : direction === 'down' ? minIdx : maxIdx;
+    const start = Math.min(effectiveAnchor, newCursorIdx);
+    const end = Math.max(effectiveAnchor, newCursorIdx);
+    const rangePaths = entries.slice(start, end + 1).map((e) => e.path);
+    setLocalSelection(rangePaths, anchorPath ?? rangePaths[0]);
+}
+
+function extendRemoteSelectionByKey(direction: 'up' | 'down'): void {
+    const entries = displayedRemoteEntries.value;
+    if (entries.length === 0) return;
+    const anchorPath = remoteSelectionAnchorPath.value;
+    const anchorIdx = anchorPath ? entries.findIndex((e) => e.path === anchorPath) : -1;
+    const currentSet = new Set(selectedRemoteEntries.value.map((e) => e.path));
+    if (currentSet.size === 0) {
+        const idx = direction === 'down' ? 0 : entries.length - 1;
+        selectedRemotePaths.value = [entries[idx].path];
+        selectedRemotePath.value = entries[idx].path;
+        remoteSelectionAnchorPath.value = entries[idx].path;
+        return;
+    }
+    const selectedIndices = entries.map((e, i) => (currentSet.has(e.path) ? i : -1)).filter((i) => i !== -1);
+    const minIdx = selectedIndices[0];
+    const maxIdx = selectedIndices[selectedIndices.length - 1];
+    let cursorIdx = anchorIdx === minIdx ? maxIdx : anchorIdx === maxIdx ? minIdx : direction === 'down' ? maxIdx : minIdx;
+    const newCursorIdx = direction === 'down' ? Math.min(cursorIdx + 1, entries.length - 1) : Math.max(cursorIdx - 1, 0);
+    const effectiveAnchor = anchorIdx !== -1 ? anchorIdx : direction === 'down' ? minIdx : maxIdx;
+    const start = Math.min(effectiveAnchor, newCursorIdx);
+    const end = Math.max(effectiveAnchor, newCursorIdx);
+    const rangePaths = entries.slice(start, end + 1).map((e) => e.path);
+    selectedRemotePaths.value = rangePaths;
+    selectedRemotePath.value = rangePaths[0] ?? null;
+    remoteSelectionAnchorPath.value = anchorPath ?? rangePaths[0] ?? null;
+}
+
 function handleGlobalKeydown(event: KeyboardEvent): void {
     if (inputModalVisible.value || conflictModalVisible.value || isTextEditingTarget(event.target)) {
         return;
@@ -2197,6 +2251,26 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
 
     const key = event.key.toLowerCase();
     const isClipboardShortcut = event.ctrlKey || event.metaKey;
+
+    // Ctrl+A: select all in active pane
+    if (isClipboardShortcut && key === 'a') {
+        if (activeExplorerPane.value === 'local') {
+            const allPaths = displayedLocalEntries.value.map((e) => e.path);
+            if (allPaths.length > 0) {
+                event.preventDefault();
+                setLocalSelection(allPaths, allPaths[0]);
+            }
+        } else if (activeExplorerPane.value === 'remote') {
+            const allPaths = displayedRemoteEntries.value.map((e) => e.path);
+            if (allPaths.length > 0) {
+                event.preventDefault();
+                selectedRemotePaths.value = allPaths;
+                selectedRemotePath.value = allPaths[0];
+                remoteSelectionAnchorPath.value = allPaths[0];
+            }
+        }
+        return;
+    }
 
     if (activeExplorerPane.value === 'local') {
         if (isClipboardShortcut && key === 'c') {
@@ -2228,6 +2302,22 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
                 event.preventDefault();
                 void deleteSelectedLocalEntries();
             }
+            return;
+        }
+
+        if (event.key === 'F2') {
+            const entry = selectedLocalEntry.value;
+            if (entry) {
+                event.preventDefault();
+                renameLocalEntry(entry);
+            }
+            return;
+        }
+
+        if (event.shiftKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            event.preventDefault();
+            extendLocalSelectionByKey(event.key === 'ArrowDown' ? 'down' : 'up');
+            return;
         }
         return;
     }
@@ -2262,6 +2352,21 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
                 event.preventDefault();
                 void deleteSelectedRemoteEntries();
             }
+            return;
+        }
+
+        if (event.key === 'F2') {
+            const entry = selectedRemoteEntry.value;
+            if (entry) {
+                event.preventDefault();
+                renameRemoteEntry(entry);
+            }
+            return;
+        }
+
+        if (event.shiftKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            event.preventDefault();
+            extendRemoteSelectionByKey(event.key === 'ArrowDown' ? 'down' : 'up');
         }
     }
 }
@@ -2808,18 +2913,65 @@ async function handleRemoteEntryDoubleClick(entry: ExplorerEntry): Promise<void>
 }
 
 function handleLocalDragStart(entry: ExplorerEntry, event: DragEvent): void {
-    if (entry.isDirectory || !event.dataTransfer) {
-        return;
-    }
-
+    if (!event.dataTransfer) return;
     selectedLocalPath.value = entry.path;
     event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData('application/x-karga-local-entry', entry.path);
     event.dataTransfer.setData('application/x-karga-local-file', entry.path);
     event.dataTransfer.setData('text/plain', entry.path);
 }
 
 function handleLocalDragEnd(): void {
     isRemoteDropActive.value = false;
+}
+
+function handleRemoteDragStart(entry: ExplorerEntry, event: DragEvent): void {
+    if (!event.dataTransfer) return;
+    selectRemoteEntry(entry);
+    event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData('application/x-karga-remote-entry', entry.path);
+    event.dataTransfer.setData('application/x-karga-remote-is-dir', entry.isDirectory ? '1' : '0');
+}
+
+function handleRemoteDragEnd(): void {
+    isLocalDropActive.value = false;
+}
+
+function handleLocalDragOver(): void {
+    if (!selectedServerId.value || !localPath.value) return;
+    isLocalDropActive.value = true;
+}
+
+function handleLocalDragLeave(): void {
+    isLocalDropActive.value = false;
+}
+
+async function handleLocalDrop(event: DragEvent): Promise<void> {
+    isLocalDropActive.value = false;
+    if (!selectedServerId.value || !localPath.value) return;
+
+    const sourcePath = event.dataTransfer?.getData('application/x-karga-remote-entry');
+    if (!sourcePath) return;
+
+    const droppedEntry = remoteEntries.value.find((e) => e.path === sourcePath);
+    if (!droppedEntry) return;
+
+    const destPath = joinLocalPath(localPath.value, droppedEntry.name);
+    const operationLabel = `${t('servers.download')}: ${droppedEntry.name}`;
+
+    try {
+        await runTransferOperation(operationLabel, 'remote-to-local', async ({ operationId, setProgress, throwIfCancelled }) => {
+            throwIfCancelled();
+            setProgress(10);
+            await pasteRemoteEntryToLocalRecursive(selectedServerId.value!, droppedEntry, destPath, operationId, true);
+            setProgress(90);
+            await loadLocalFiles();
+            setProgress(100);
+        });
+    } catch (error) {
+        if (isTransferCancelledError(error)) return;
+        localErrorMessage.value = filterGenericError(error);
+    }
 }
 
 function handleRemoteDragOver(): void {
@@ -2837,24 +2989,39 @@ function handleRemoteDragLeave(): void {
 async function handleRemoteDrop(event: DragEvent): Promise<void> {
     isRemoteDropActive.value = false;
 
-    if (!selectedServerId.value) {
-        return;
-    }
+    if (!selectedServerId.value) return;
 
-    const sourcePath = event.dataTransfer?.getData('application/x-karga-local-file') || event.dataTransfer?.getData('text/plain');
+    const sourcePath = event.dataTransfer?.getData('application/x-karga-local-entry')
+        || event.dataTransfer?.getData('application/x-karga-local-file')
+        || event.dataTransfer?.getData('text/plain');
 
-    if (!sourcePath) {
-        return;
-    }
+    if (!sourcePath) return;
 
     const droppedEntry = localEntries.value.find((entry) => entry.path === sourcePath);
+    if (!droppedEntry) return;
 
-    if (!droppedEntry || droppedEntry.isDirectory) {
+    if (!droppedEntry.isDirectory) {
+        selectedLocalPath.value = droppedEntry.path;
+        await uploadSelectedLocalFile();
         return;
     }
 
-    selectedLocalPath.value = droppedEntry.path;
-    await uploadSelectedLocalFile();
+    const remoteDestPath = joinRemotePath(remotePath.value || '/', droppedEntry.name);
+    const operationLabel = `${t('servers.upload')}: ${droppedEntry.name}`;
+
+    try {
+        await runTransferOperation(operationLabel, 'local-to-remote', async ({ operationId, setProgress, throwIfCancelled }) => {
+            throwIfCancelled();
+            setProgress(10);
+            await pasteLocalEntryToRemoteRecursive(droppedEntry, remoteDestPath, operationId, true);
+            setProgress(90);
+            await loadRemoteFiles();
+            setProgress(100);
+        });
+    } catch (error) {
+        if (isTransferCancelledError(error)) return;
+        remoteErrorMessage.value = filterGenericError(error);
+    }
 }
 
 function closeContextMenu(): void {
@@ -3108,6 +3275,17 @@ async function openRemoteFileForEdit(entry: ExplorerEntry): Promise<void> {
         return;
     }
 
+    const sessionKey = getRemoteEditSessionKey(selectedServerId.value, entry.path);
+    const existingSession = remoteEditSessions.get(sessionKey);
+
+    if (existingSession) {
+        const confirmed = window.confirm(t('servers.redownloadConfirm', { name: entry.name }));
+        if (!confirmed) return;
+        window.clearInterval(existingSession.pollTimerId);
+        remoteEditSessions.delete(sessionKey);
+        updateActiveRemoteEditSessionCount();
+    }
+
     const operationLabel = `${t('servers.editFile')}: ${entry.name}`;
 
     try {
@@ -3136,15 +3314,6 @@ async function openRemoteFileForEdit(entry: ExplorerEntry): Promise<void> {
 
             const initialContentBase64 = await localFilesService.readFile(localPathFromDownload);
             await remoteFilesService.openRemoteFileExternal(localPathFromDownload);
-
-            const sessionKey = getRemoteEditSessionKey(selectedServerId.value!, entry.path);
-            const existingSession = remoteEditSessions.get(sessionKey);
-
-            if (existingSession) {
-                window.clearInterval(existingSession.pollTimerId);
-                remoteEditSessions.delete(sessionKey);
-                updateActiveRemoteEditSessionCount();
-            }
 
             const session: RemoteEditSession = {
                 serverId: selectedServerId.value!,
@@ -3253,45 +3422,28 @@ async function downloadRemoteEntry(entry: ExplorerEntry): Promise<void> {
 }
 
 async function uploadSelectedLocalFile(): Promise<void> {
-    if (!selectedServerId.value || !selectedLocalFile.value) {
+    if (!selectedServerId.value || selectedLocalEntries.value.length === 0) {
         return;
     }
 
-    const initialRemoteTarget = joinRemotePath(remotePath.value || '/', selectedLocalFile.value.name);
-    const sourceFile = selectedLocalFile.value;
-    const operationLabel = `${t('servers.uploadSelected')}: ${sourceFile.name}`;
+    const entries = [...selectedLocalEntries.value];
+    const destinationDirectory = remotePath.value || '/';
+    const operationLabel = `${t('servers.uploadSelected')}: ${destinationDirectory}`;
 
     try {
-        await runTransferOperation(operationLabel, 'local-to-remote', async ({ setProgress, throwIfCancelled }) => {
-            throwIfCancelled();
-            setProgress(20);
-
-            const resolvedRemotePath = await resolveRemoteDestinationPath(selectedServerId.value!, sourceFile, initialRemoteTarget);
-
-            if (!resolvedRemotePath) {
-                setProgress(100);
-                return;
+        await runTransferOperation(operationLabel, 'local-to-remote', async ({ operationId, setProgress, throwIfCancelled }) => {
+            let completed = 0;
+            for (const entry of entries) {
+                throwIfCancelled();
+                const targetPath = joinRemotePath(destinationDirectory, entry.name);
+                const resolvedPath = await resolveRemoteDestinationPath(selectedServerId.value!, entry, targetPath);
+                if (resolvedPath) {
+                    await pasteLocalEntryToRemoteRecursive(entry, resolvedPath, operationId, true);
+                }
+                completed++;
+                setProgress((completed / entries.length) * 100);
             }
-
-            const contentBase64 = await localFilesService.readFile(sourceFile.path);
-            setProgress(45);
-            throwIfCancelled();
-
-            await backupBeforeUpload(resolvedRemotePath);
-
-            await remoteFilesService.uploadRemoteFile(
-                selectedServerId.value!,
-                resolvedRemotePath,
-                contentBase64,
-                needsPassword.value ? {
-                    username: temporaryUsername.value.trim() || undefined,
-                    password: temporaryPassword.value.trim() || undefined,
-                } : undefined,
-            );
-
-            setProgress(90);
             await loadRemoteFiles();
-            setProgress(100);
         });
     } catch (error) {
         if (isTransferCancelledError(error)) {
