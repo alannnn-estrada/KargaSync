@@ -153,3 +153,12 @@ Pinia 3 wraps setup stores in `reactive()`, which auto-unwraps nested refs and c
 
 ### Sidebar collapsed overflow — FIXED
 When `isSidebarCollapsed=true`, the old markup tried to reuse expanded layout with conditional Tailwind classes. Two bugs: (1) `px-2.5 py-2.5 md:w-11` on nav links — 32px icon + 20px padding = 52px but w-11=44px; (2) two `h-9 w-9` buttons side by side (76px) in 44px content area. Fixed by using separate `<template v-if>` blocks for expanded vs collapsed header, and `justify-center p-2 w-full` on nav items in collapsed mode.
+
+### Ignore patterns DB migration version
+`ignore_patterns` table uses migration version **4**. Versions 1–3 were already claimed by earlier migrations. Always check the latest migration version in `src/db/bootstrap.ts` before adding a new one.
+
+### Deploy push channel requires isDestroyed() guard
+`event.sender.send(DEPLOY_CHANNELS.progress, ...)` must be wrapped with `if (!event.sender.isDestroyed())` — the renderer window may close mid-transfer and sending to a destroyed webContents throws. Pattern used in `deploy:batch` handler in `register-ipc-handlers.ts`.
+
+### Worktree agents work from stale base commit
+When spawning agents with `isolation: "worktree"`, they fork from the current HEAD at spawn time. If master advances after spawn (e.g. another agent commits), the worktrees are stale. Always `git diff HEAD` inside each worktree to extract only the NEW additions, then apply them surgically to master's current files. Never cherry-pick or direct-merge from stale worktrees.
