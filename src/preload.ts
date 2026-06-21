@@ -56,10 +56,14 @@ const api: RendererApi = {
     renameRemotePath: (serverId: number, sourcePath: string, targetPath: string, credentialOverride?: string | { username?: string; password?: string }) => ipcRenderer.invoke(REMOTE_FILE_CHANNELS.rename, serverId, sourcePath, targetPath, credentialOverride),
     openRemoteFileExternal: (localPath: string) => ipcRenderer.invoke(REMOTE_FILE_CHANNELS.openExternal, localPath),
     // Versions
-    listVersions: (serverId, baseRemotePath) => ipcRenderer.invoke(IPC_CHANNELS.versionsList, serverId, baseRemotePath),
-    createVersion: (input) => ipcRenderer.invoke(IPC_CHANNELS.versionsCreate, input),
+    listVersions: (serverId) => ipcRenderer.invoke(IPC_CHANNELS.versionsList, serverId),
+    startVersionSession: (input) => ipcRenderer.invoke(IPC_CHANNELS.versionsStart, input),
+    backupFileForVersion: (input) => ipcRenderer.invoke(IPC_CHANNELS.versionsBackupFile, input),
+    finishVersionSession: (versionId) => ipcRenderer.invoke(IPC_CHANNELS.versionsFinish, versionId),
+    abortVersionSession: (versionId) => ipcRenderer.invoke(IPC_CHANNELS.versionsAbort, versionId),
     rollbackVersion: (versionId) => ipcRenderer.invoke(IPC_CHANNELS.versionsRollback, versionId),
     deleteVersion: (versionId) => ipcRenderer.invoke(IPC_CHANNELS.versionsDelete, versionId),
+    chooseKeyFile: () => ipcRenderer.invoke(LOCAL_FILE_CHANNELS.chooseKeyFile),
 };
 
 contextBridge.exposeInMainWorld('api', Object.freeze(api));

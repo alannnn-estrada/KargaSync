@@ -37,7 +37,10 @@ export const IPC_CHANNELS = {
     environmentBindingsAssign: 'environmentBindings:assign',
     environmentBindingsList: 'environmentBindings:list',
     versionsList: 'versions:list',
-    versionsCreate: 'versions:create',
+    versionsStart: 'versions:start',
+    versionsBackupFile: 'versions:backupFile',
+    versionsFinish: 'versions:finish',
+    versionsAbort: 'versions:abort',
     versionsRollback: 'versions:rollback',
     versionsDelete: 'versions:delete',
 } as const;
@@ -45,6 +48,7 @@ export const IPC_CHANNELS = {
 export const LOCAL_FILE_CHANNELS = {
     defaultRoot: 'localFiles:defaultRoot',
     chooseRoot: 'localFiles:chooseRoot',
+    chooseKeyFile: 'localFiles:chooseKeyFile',
     list: 'localFiles:list',
     readFile: 'localFiles:readFile',
     writeFile: 'localFiles:writeFile',
@@ -100,12 +104,15 @@ export interface VersionDto {
     finishedAt: string | null;
 }
 
-export interface CreateVersionInput {
+export interface StartVersionInput {
     serverId: number;
-    baseRemotePath: string;
     label?: string;
-    filesToBackup: string[];
-    filesToUpload: Array<{ remotePath: string; contentBase64: string }>;
+}
+
+export interface BackupFileForVersionInput {
+    versionId: number;
+    serverId: number;
+    remotePath: string;
 }
 
 export interface AppMenuAnchorDto {
@@ -180,8 +187,12 @@ export interface RendererApi {
     renameRemotePath: (serverId: number, sourcePath: string, targetPath: string, credentialOverride?: string | RemoteFileCredentialOverrideDto) => Promise<void>;
     openRemoteFileExternal: (localPath: string) => Promise<void>;
     // Versions
-    listVersions: (serverId: number, baseRemotePath: string) => Promise<VersionDto[]>;
-    createVersion: (input: CreateVersionInput) => Promise<VersionDto>;
+    listVersions: (serverId: number) => Promise<VersionDto[]>;
+    startVersionSession: (input: StartVersionInput) => Promise<{ id: number; storagePath: string }>;
+    backupFileForVersion: (input: BackupFileForVersionInput) => Promise<{ backed: boolean }>;
+    finishVersionSession: (versionId: number) => Promise<void>;
+    abortVersionSession: (versionId: number) => Promise<void>;
     rollbackVersion: (versionId: number) => Promise<void>;
     deleteVersion: (versionId: number) => Promise<boolean>;
+    chooseKeyFile: () => Promise<string | null>;
 }

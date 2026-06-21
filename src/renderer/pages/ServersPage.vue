@@ -1,10 +1,9 @@
 <template>
     <section class="mx-auto flex min-h-[calc(100vh-1.5rem)] w-full max-w-6xl flex-col gap-6 px-3 py-3 md:px-4 md:py-4">
-        <header class="rounded-3xl border border-(--app-border) bg-(--app-surface) px-5 py-4 shadow-(--app-shadow)">
-            <p class="text-[11px] font-medium uppercase tracking-[0.18em] text-(--app-muted)">{{ t('servers.section') }}
-            </p>
-            <h1 class="mt-1 text-xl font-semibold tracking-tight text-(--app-text)">{{ t('servers.title') }}</h1>
-            <p class="mt-2 max-w-2xl text-sm text-(--app-muted)">{{ t('servers.description') }}</p>
+        <header class="flex items-center gap-3 rounded-xl border border-(--app-border) bg-(--app-surface) px-4 py-3 shadow-(--app-shadow-sm)">
+            <p class="text-[11px] font-medium uppercase tracking-[0.18em] text-(--app-muted)">{{ t('servers.section') }}</p>
+            <span class="h-3 w-px bg-(--app-border)" />
+            <h1 class="text-sm font-semibold tracking-tight text-(--app-text)">{{ t('servers.title') }}</h1>
         </header>
 
         <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
@@ -74,10 +73,17 @@
                         <label class="block">
                             <span class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">{{
                                 t('servers.secret') }}</span>
-                            <input v-model="form.secret" :type="form.authType === 'password' ? 'password' : 'text'"
-                                class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
-                                :placeholder="form.authType === 'password' ? t('servers.passwordPlaceholder') : t('servers.keyPlaceholder')"
-                                :disabled="isSaving" />
+                            <div class="mt-2 flex gap-2">
+                                <input v-model="form.secret" :type="form.authType === 'password' ? 'password' : 'text'"
+                                    class="min-w-0 flex-1 rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
+                                    :placeholder="form.authType === 'password' ? t('servers.passwordPlaceholder') : t('servers.keyPlaceholder')"
+                                    :disabled="isSaving" />
+                                <button v-if="form.authType === 'key'" type="button"
+                                    class="shrink-0 rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-2 text-xs font-semibold text-(--app-text) transition hover:border-(--app-accent)"
+                                    :disabled="isSaving" @click="handleChooseKeyFile">
+                                    {{ t('servers.chooseKeyFile') }}
+                                </button>
+                            </div>
                         </label>
                     </div>
 
@@ -155,7 +161,7 @@
                                 {{ t('servers.edit') }}
                             </button>
                             <button type="button"
-                                class="inline-flex items-center gap-1.5 rounded-md border border-(--status-deleted-border) bg-(--status-deleted-bg) px-3 py-1.5 text-xs text-(--status-deleted-text) transition hover:opacity-80"
+                                class="inline-flex items-center gap-1.5 rounded-md border border-(--app-border) bg-transparent px-3 py-1.5 text-xs text-(--app-muted) transition hover:border-(--status-deleted-border) hover:text-(--status-deleted-text)"
                                 @click="handleDeleteServer(server.id)">
                                 <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="2 4 14 4"/><path d="M5 4V2h6v2"/><path d="M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/>
@@ -177,9 +183,15 @@ import { RefreshCw } from '@lucide/vue';
 
 import { useApi } from '../composables';
 import type { GetAllServersResponseDto } from '../services/api';
+import { chooseKeyFile } from '../services/api';
 
 const { t } = useI18n({ useScope: 'global' });
 const { listServers, createServer, updateServer, deleteServer, testServer } = useApi();
+
+async function handleChooseKeyFile() {
+    const content = await chooseKeyFile();
+    if (content != null) form.value.secret = content;
+}
 
 const servers = ref<GetAllServersResponseDto>([]);
 const isLoading = ref(false);

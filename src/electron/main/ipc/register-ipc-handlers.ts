@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { isPpkContent, convertPpkToPrivateKey } from '../utils/ppk-converter';
 
 import { createCreateProjectCommand } from '../../../core/application/commands/create-project';
 import { createCreateSnapshotCommand } from '../../../core/application/commands/create-snapshot';
@@ -222,6 +223,13 @@ function toSettingsDto(settings: GetSettingsResponseDTO): GetSettingsResponseDTO
     };
 }
 
+function resolveSftpPrivateKey(keyContent: string): string {
+    if (isPpkContent(keyContent)) {
+        return convertPpkToPrivateKey(keyContent);
+    }
+    return keyContent;
+}
+
 export function registerIpcHandlers(database: DatabaseHandle): void {
     const getAllProjectsQuery = createGetAllProjectsQuery({
         projectManager: database.projectManager,
@@ -274,8 +282,12 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         REMOTE_FILE_CHANNELS.createFile,
         REMOTE_FILE_CHANNELS.rename,
         REMOTE_FILE_CHANNELS.openExternal,
+        LOCAL_FILE_CHANNELS.chooseKeyFile,
         IPC_CHANNELS.versionsList,
-        IPC_CHANNELS.versionsCreate,
+        IPC_CHANNELS.versionsStart,
+        IPC_CHANNELS.versionsBackupFile,
+        IPC_CHANNELS.versionsFinish,
+        IPC_CHANNELS.versionsAbort,
         IPC_CHANNELS.versionsRollback,
         IPC_CHANNELS.versionsDelete,
     ].forEach((channel) => ipcMain.removeHandler(channel));
@@ -656,7 +668,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
                 connectOpts.username = credential.username ?? server.username;
                 connectOpts.password = credential.password;
             } else {
-                connectOpts.privateKey = credential.password;
+                connectOpts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
             }
 
             await withTimeout(client.connect(connectOpts), 'SFTP connection');
@@ -718,7 +730,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
 
         try {
             const connectOpts: any = { host: server.host, port: server.port, username: credential.username ?? server.username };
-            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password;
+            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
             await withTimeout(client.connect(connectOpts), 'SFTP connection');
             await withTimeout(client.fastGet(remotePath, localPath), 'SFTP download');
             await persistRemoteCredentialOverride(database, serverId, server, credentialOverride, credential);
@@ -771,7 +783,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
 
         try {
             const connectOpts: any = { host: server.host, port: server.port, username: credential.username ?? server.username };
-            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password;
+            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
             await withTimeout(client.connect(connectOpts), 'SFTP connection');
             await withTimeout(client.fastGet(remotePath, localPath), 'SFTP download');
             await persistRemoteCredentialOverride(database, serverId, server, credentialOverride, credential);
@@ -828,7 +840,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         try {
             await fs.writeFile(localPath, Buffer.from(contentBase64, 'base64'));
             const connectOpts: any = { host: server.host, port: server.port, username: credential.username ?? server.username };
-            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password;
+            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
             await withTimeout(client.connect(connectOpts), 'SFTP connection');
             await withTimeout(client.fastPut(localPath, remotePath), 'SFTP upload');
             await persistRemoteCredentialOverride(database, serverId, server, credentialOverride, credential);
@@ -884,7 +896,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         const client = new SftpClient();
         try {
             const connectOpts: any = { host: server.host, port: server.port, username: credential.username ?? server.username };
-            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password;
+            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
             await withTimeout(client.connect(connectOpts), 'SFTP connection');
             try {
                 await withTimeout(client.delete(remotePath), 'SFTP delete');
@@ -939,7 +951,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         const client = new SftpClient();
         try {
             const connectOpts: any = { host: server.host, port: server.port, username: credential.username ?? server.username };
-            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password;
+            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
             await withTimeout(client.connect(connectOpts), 'SFTP connection');
             await withTimeout(client.mkdir(remotePath, true), 'SFTP mkdir');
             await persistRemoteCredentialOverride(database, serverId, server, credentialOverride, credential);
@@ -995,7 +1007,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         const client = new SftpClient();
         try {
             const connectOpts: any = { host: server.host, port: server.port, username: credential.username ?? server.username };
-            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password;
+            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
             await withTimeout(client.connect(connectOpts), 'SFTP connection');
             await withTimeout(client.put(Buffer.alloc(0), remotePath), 'SFTP create file');
             await persistRemoteCredentialOverride(database, serverId, server, credentialOverride, credential);
@@ -1043,7 +1055,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         const client = new SftpClient();
         try {
             const connectOpts: any = { host: server.host, port: server.port, username: credential.username ?? server.username };
-            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password;
+            if (server.authType === 'password') connectOpts.password = credential.password; else connectOpts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
             await withTimeout(client.connect(connectOpts), 'SFTP connection');
             await withTimeout(client.rename(sourcePath, targetPath), 'SFTP rename');
             await persistRemoteCredentialOverride(database, serverId, server, credentialOverride, credential);
@@ -1244,6 +1256,23 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         return toSnapshotDto(snapshot);
     });
 
+    // ── Key file chooser ─────────────────────────────────────────────────────
+
+    ipcMain.handle(LOCAL_FILE_CHANNELS.chooseKeyFile, async (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        const result = await dialog.showOpenDialog(win ?? undefined, {
+            title: 'Choose SSH private key file',
+            properties: ['openFile'],
+            filters: [
+                { name: 'Private Key Files', extensions: ['ppk', 'pem', 'key', 'rsa'] },
+                { name: 'All Files', extensions: ['*'] },
+            ],
+        });
+        if (result.canceled || result.filePaths.length === 0) return null;
+        const content = await fs.readFile(result.filePaths[0], 'utf-8');
+        return content;
+    });
+
     // ── Versioning ────────────────────────────────────────────────────────────
 
     function toVersionDto(row: any): import('../../../shared/ipc/contracts').VersionDto {
@@ -1262,22 +1291,53 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         };
     }
 
-    ipcMain.handle(IPC_CHANNELS.versionsList, async (_event, serverId: number, baseRemotePath: string) => {
+    async function versionSftpDownload(server: any, credential: any, remotePath: string, localPath: string): Promise<void> {
+        if (server.protocol === 'ftp') {
+            const ftpClient = createFtpClient();
+            try {
+                await withTimeout(ftpClient.access({ host: normalizeFtpHost(server.host), port: server.port, user: credential.username, password: credential.password, secure: false }), 'FTP connect');
+                await withTimeout(ftpClient.downloadTo(localPath, remotePath), 'FTP download');
+            } finally { ftpClient.close(); }
+        } else {
+            const client = new SftpClient();
+            try {
+                const opts: any = { host: server.host, port: server.port, username: credential.username };
+                if (server.authType === 'password') opts.password = credential.password; else opts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
+                await withTimeout(client.connect(opts), 'SFTP connect');
+                await withTimeout(client.fastGet(remotePath, localPath), 'SFTP download');
+            } finally { client.end(); }
+        }
+    }
+
+    async function versionSftpUpload(server: any, credential: any, localPath: string, remotePath: string): Promise<void> {
+        if (server.protocol === 'ftp') {
+            const ftpClient = createFtpClient();
+            try {
+                await withTimeout(ftpClient.access({ host: normalizeFtpHost(server.host), port: server.port, user: credential.username, password: credential.password, secure: false }), 'FTP connect');
+                await withTimeout(ftpClient.uploadFrom(localPath, remotePath), 'FTP upload');
+            } finally { ftpClient.close(); }
+        } else {
+            const client = new SftpClient();
+            try {
+                const opts: any = { host: server.host, port: server.port, username: credential.username };
+                if (server.authType === 'password') opts.password = credential.password; else opts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
+                await withTimeout(client.connect(opts), 'SFTP connect');
+                await withTimeout(client.fastPut(localPath, remotePath), 'SFTP upload');
+            } finally { client.end(); }
+        }
+    }
+
+    ipcMain.handle(IPC_CHANNELS.versionsList, async (_event, serverId: number) => {
         const rows = database.db.prepare(
-            'SELECT * FROM versions WHERE server_id = ? AND remote_path = ? ORDER BY created_at DESC',
-        ).all(serverId, baseRemotePath) as any[];
+            'SELECT * FROM versions WHERE server_id = ? ORDER BY created_at DESC',
+        ).all(serverId) as any[];
         return rows.map(toVersionDto);
     });
 
-    ipcMain.handle(IPC_CHANNELS.versionsCreate, async (
+    ipcMain.handle(IPC_CHANNELS.versionsStart, async (
         _event,
-        input: import('../../../shared/ipc/contracts').CreateVersionInput,
+        input: import('../../../shared/ipc/contracts').StartVersionInput,
     ) => {
-        const server = database.projectManager.getServer(input.serverId);
-        if (!server) throw new Error(`Server ${input.serverId} not found`);
-        const storedCred = await database.credentials.getCredential(input.serverId);
-        const credential = { username: server.username, password: storedCred ?? undefined };
-
         const timestamp = Date.now();
         const safeLbl = (input.label ?? '').replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 40);
         const versionDir = path.join(
@@ -1287,85 +1347,53 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
             `${timestamp}${safeLbl ? '_' + safeLbl : ''}`,
         );
         await fs.mkdir(versionDir, { recursive: true });
+        const result = database.db.prepare(
+            `INSERT INTO versions (server_id, remote_path, label, status, storage_path) VALUES (?, '/', ?, 'running', ?)`,
+        ).run(input.serverId, input.label ?? null, versionDir);
+        return { id: Number(result.lastInsertRowid), storagePath: versionDir };
+    });
 
-        const insertStmt = database.db.prepare(
-            `INSERT INTO versions (server_id, remote_path, label, status, storage_path) VALUES (?, ?, ?, 'running', ?)`,
-        );
-        const insertResult = insertStmt.run(input.serverId, input.baseRemotePath, input.label ?? null, versionDir);
-        const versionId = insertResult.lastInsertRowid as number;
+    ipcMain.handle(IPC_CHANNELS.versionsBackupFile, async (
+        _event,
+        input: import('../../../shared/ipc/contracts').BackupFileForVersionInput,
+    ) => {
+        const version = database.db.prepare('SELECT * FROM versions WHERE id = ?').get(input.versionId) as any;
+        if (!version) throw new Error(`Version ${input.versionId} not found`);
 
-        let bytesStored = 0;
-        let fileCount = 0;
+        const server = database.projectManager.getServer(input.serverId);
+        if (!server) throw new Error(`Server ${input.serverId} not found`);
+        const storedCred = await database.credentials.getCredential(input.serverId);
+        const credential = { username: server.username, password: storedCred ?? undefined };
+
+        const relPath = input.remotePath.replace(/^\/+/, '').split('/').join(path.sep);
+        const localDest = path.join(version.storage_path, relPath);
+        await fs.mkdir(path.dirname(localDest), { recursive: true });
 
         try {
-            for (const remoteFilePath of input.filesToBackup) {
-                const rel = remoteFilePath.startsWith(input.baseRemotePath)
-                    ? remoteFilePath.slice(input.baseRemotePath.length).replace(/^\/+/, '')
-                    : path.posix.basename(remoteFilePath);
-                const localDest = path.join(versionDir, ...rel.split('/'));
-                await fs.mkdir(path.dirname(localDest), { recursive: true });
-
-                try {
-                    if (server.protocol === 'ftp') {
-                        const ftpClient = createFtpClient();
-                        try {
-                            await withTimeout(ftpClient.access({ host: normalizeFtpHost(server.host), port: server.port, user: credential.username, password: credential.password, secure: false }), 'FTP connect');
-                            await withTimeout(ftpClient.downloadTo(localDest, remoteFilePath), 'FTP download backup');
-                        } finally { ftpClient.close(); }
-                    } else {
-                        const client = new SftpClient();
-                        try {
-                            const opts: any = { host: server.host, port: server.port, username: credential.username };
-                            if (server.authType === 'password') opts.password = credential.password; else opts.privateKey = credential.password;
-                            await withTimeout(client.connect(opts), 'SFTP connect');
-                            await withTimeout(client.fastGet(remoteFilePath, localDest), 'SFTP download backup');
-                        } finally { client.end(); }
-                    }
-                    const stat = await fs.stat(localDest);
-                    bytesStored += stat.size;
-                    fileCount++;
-                } catch {
-                    // file may not exist remotely yet — skip backup for it
-                }
-            }
-
-            for (const { remotePath: remoteFilePath, contentBase64 } of input.filesToUpload) {
-                const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'karga-ver-'));
-                const tmpPath = path.join(tmpDir, path.posix.basename(remoteFilePath));
-                try {
-                    await fs.writeFile(tmpPath, Buffer.from(contentBase64, 'base64'));
-                    if (server.protocol === 'ftp') {
-                        const ftpClient = createFtpClient();
-                        try {
-                            await withTimeout(ftpClient.access({ host: normalizeFtpHost(server.host), port: server.port, user: credential.username, password: credential.password, secure: false }), 'FTP connect');
-                            await withTimeout(ftpClient.uploadFrom(tmpPath, remoteFilePath), 'FTP upload version');
-                        } finally { ftpClient.close(); }
-                    } else {
-                        const client = new SftpClient();
-                        try {
-                            const opts: any = { host: server.host, port: server.port, username: credential.username };
-                            if (server.authType === 'password') opts.password = credential.password; else opts.privateKey = credential.password;
-                            await withTimeout(client.connect(opts), 'SFTP connect');
-                            await withTimeout(client.fastPut(tmpPath, remoteFilePath), 'SFTP upload version');
-                        } finally { client.end(); }
-                    }
-                } finally {
-                    try { await fs.rm(tmpPath); } catch { /* ignore */ }
-                }
-            }
-
+            await versionSftpDownload(server, credential, input.remotePath, localDest);
+            const stat = await fs.stat(localDest);
             database.db.prepare(
-                `UPDATE versions SET status='completed', file_count=?, bytes_stored=?, finished_at=CURRENT_TIMESTAMP WHERE id=?`,
-            ).run(fileCount, bytesStored, versionId);
-        } catch (err: any) {
+                `INSERT INTO version_files (version_id, remote_path, local_path, size_bytes) VALUES (?, ?, ?, ?)`,
+            ).run(input.versionId, input.remotePath, localDest, stat.size);
             database.db.prepare(
-                `UPDATE versions SET status='failed', error_message=?, finished_at=CURRENT_TIMESTAMP WHERE id=?`,
-            ).run(String(err?.message ?? err), versionId);
-            throw err;
+                `UPDATE versions SET file_count = file_count + 1, bytes_stored = bytes_stored + ? WHERE id = ?`,
+            ).run(stat.size, input.versionId);
+            return { backed: true };
+        } catch {
+            return { backed: false };
         }
+    });
 
-        const row = database.db.prepare('SELECT * FROM versions WHERE id = ?').get(versionId);
-        return toVersionDto(row);
+    ipcMain.handle(IPC_CHANNELS.versionsFinish, async (_event, versionId: number) => {
+        database.db.prepare(
+            `UPDATE versions SET status='completed', finished_at=CURRENT_TIMESTAMP WHERE id = ?`,
+        ).run(versionId);
+    });
+
+    ipcMain.handle(IPC_CHANNELS.versionsAbort, async (_event, versionId: number) => {
+        database.db.prepare(
+            `UPDATE versions SET status='failed', error_message='Aborted by user', finished_at=CURRENT_TIMESTAMP WHERE id = ?`,
+        ).run(versionId);
     });
 
     ipcMain.handle(IPC_CHANNELS.versionsRollback, async (_event, versionId: number) => {
@@ -1376,45 +1404,21 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         if (!server) throw new Error(`Server ${version.server_id} not found`);
         const storedCred = await database.credentials.getCredential(version.server_id);
         const credential = { username: server.username, password: storedCred ?? undefined };
-        const versionDir = version.storage_path as string;
-        const baseRemotePath = version.remote_path as string;
 
-        async function walkAndUpload(localDir: string, relBase: string): Promise<void> {
-            const entries = await fs.readdir(localDir, { withFileTypes: true });
-            for (const entry of entries) {
-                const localFilePath = path.join(localDir, entry.name);
-                const relPath = relBase ? `${relBase}/${entry.name}` : entry.name;
-                const remoteFilePath = `${baseRemotePath.replace(/\/+$/, '')}/${relPath}`;
-                if (entry.isDirectory()) {
-                    await walkAndUpload(localFilePath, relPath);
-                } else if (entry.isFile()) {
-                    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'karga-rollback-'));
-                    const tmpPath = path.join(tmpDir, entry.name);
-                    try {
-                        await fs.copyFile(localFilePath, tmpPath);
-                        if (server.protocol === 'ftp') {
-                            const ftpClient = createFtpClient();
-                            try {
-                                await withTimeout(ftpClient.access({ host: normalizeFtpHost(server.host), port: server.port, user: credential.username, password: credential.password, secure: false }), 'FTP connect');
-                                await withTimeout(ftpClient.uploadFrom(tmpPath, remoteFilePath), 'FTP rollback upload');
-                            } finally { ftpClient.close(); }
-                        } else {
-                            const client = new SftpClient();
-                            try {
-                                const opts: any = { host: server.host, port: server.port, username: credential.username };
-                                if (server.authType === 'password') opts.password = credential.password; else opts.privateKey = credential.password;
-                                await withTimeout(client.connect(opts), 'SFTP connect');
-                                await withTimeout(client.fastPut(tmpPath, remoteFilePath), 'SFTP rollback upload');
-                            } finally { client.end(); }
-                        }
-                    } finally {
-                        try { await fs.rm(tmpPath); } catch { /* ignore */ }
-                    }
-                }
+        const fileRows = database.db.prepare(
+            'SELECT * FROM version_files WHERE version_id = ?',
+        ).all(versionId) as any[];
+
+        for (const fileRow of fileRows) {
+            const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'karga-rollback-'));
+            const tmpPath = path.join(tmpDir, path.basename(fileRow.local_path));
+            try {
+                await fs.copyFile(fileRow.local_path, tmpPath);
+                await versionSftpUpload(server, credential, tmpPath, fileRow.remote_path);
+            } finally {
+                try { await fs.rm(tmpPath); } catch { /* ignore */ }
             }
         }
-
-        await walkAndUpload(versionDir, '');
     });
 
     ipcMain.handle(IPC_CHANNELS.versionsDelete, async (_event, versionId: number) => {

@@ -1,10 +1,11 @@
 <template>
     <section class="mx-auto flex min-h-[calc(100vh-1.5rem)] w-full max-w-7xl flex-col gap-4 px-3 py-3 md:px-4 md:py-4">
-        <header class="rounded-3xl border border-(--app-border) bg-(--app-surface) px-5 py-4 shadow-(--app-shadow)">
+        <header class="flex items-center gap-3 rounded-xl border border-(--app-border) bg-(--app-surface) px-4 py-3 shadow-(--app-shadow-sm)">
             <p class="text-[11px] font-medium uppercase tracking-[0.18em] text-(--app-muted)">{{
                 t('servers.ftpExplorer') }}</p>
-            <h1 class="mt-1 text-xl font-semibold tracking-tight text-(--app-text)">{{ t('servers.explorerMenu') }}</h1>
-            <p class="mt-2 max-w-3xl text-sm text-(--app-muted)">{{ t('servers.explorerDescription') }}</p>
+            <span class="h-3 w-px bg-(--app-border)" />
+            <h1 class="text-sm font-semibold tracking-tight text-(--app-text)">{{ t('servers.explorerMenu') }}</h1>
+            <span class="ml-auto text-xs text-(--app-muted)">Ctrl+R — {{ t('servers.refresh') }}</span>
         </header>
 
         <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
@@ -12,83 +13,85 @@
                 class="relative rounded-2xl border border-(--app-border) bg-(--app-elevated) p-4 shadow-(--app-shadow-sm)"
                 :class="activeExplorerPane === 'local' ? 'ring-2 ring-(--app-accent) ring-offset-2 ring-offset-transparent' : ''"
                 @click="setActiveExplorerPane('local')" @contextmenu.prevent="openContextMenu($event, 'local')">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
-                            t('servers.localFiles') }}</p>
-                        <p class="mt-1 text-sm text-(--app-muted)">{{ t('servers.localFilesDescription') }}</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
+                <p class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
+                    t('servers.localFiles') }}</p>
+
+                <div class="mt-3">
+                    <div class="mb-1.5 flex items-center justify-between">
+                        <span class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">{{
+                            t('servers.localPath') }}</span>
                         <button type="button"
-                            class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-2 text-sm font-semibold"
-                            @click="chooseLocalRoot">
-                            {{ t('servers.chooseFolder') }}
-                        </button>
-                        <button type="button"
-                            class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-2 text-sm font-semibold"
-                            @click="loadLocalFiles">
-                            {{ t('servers.refresh') }}
+                            class="flex h-6 w-6 items-center justify-center rounded-md text-(--app-muted) transition hover:text-(--app-accent)"
+                            :title="t('servers.chooseFolder')"
+                            @click.stop="chooseLocalRoot">
+                            <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 5.5a1 1 0 0 1 1-1h3l1.5 2H13a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5.5Z"/>
+                            </svg>
                         </button>
                     </div>
+                    <input v-model="localPath" type="text"
+                        class="w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
+                        @keyup.enter="loadLocalFiles" />
                 </div>
 
-                <label class="mt-3 block">
-                    <span class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">{{
-                        t('servers.localPath') }}</span>
-                    <input v-model="localPath" type="text"
-                        class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
-                        @keyup.enter="loadLocalFiles" />
-                </label>
-
-                <div
-                    class="mt-3 rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-3 text-sm text-(--app-muted)">
-                    <p class="font-medium text-(--app-text)">{{ t('servers.localSelection') }}</p>
-                    <p class="mt-1 truncate">{{ selectedLocalFileLabel }}</p>
-                    <div v-if="localClipboard || remoteClipboard" class="mt-2 flex flex-wrap items-center gap-2">
-                        <span v-if="localClipboard" class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                <!-- Selection bar + actions popup -->
+                <div class="mt-3 flex items-center gap-2">
+                    <div class="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-2.5 py-1.5">
+                        <span class="min-w-0 flex-1 truncate text-xs text-(--app-muted)">{{ selectedLocalFileLabel }}</span>
+                        <span v-if="localClipboard"
+                            class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
                             :class="localClipboard.mode === 'cut' ? 'bg-(--status-deleted-bg) text-(--status-deleted-text)' : 'bg-(--status-modified-soft) text-(--status-modified-text)'">
-                            {{ localClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy') }}
-                            {{ localClipboard.entries.length }}
+                            {{ localClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy') }} {{ localClipboard.entries.length }}
                         </span>
-                        <span v-else-if="remoteClipboard" class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                        <span v-else-if="remoteClipboard"
+                            class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
                             :class="remoteClipboard.mode === 'cut' ? 'bg-(--status-deleted-bg) text-(--status-deleted-text)' : 'bg-(--status-modified-soft) text-(--status-modified-text)'">
-                            {{ remoteClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy')
-                            }}
-                            {{ remoteClipboard.entries.length }}
+                            {{ remoteClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy') }} {{ remoteClipboard.entries.length }}
                         </span>
-                        <button type="button"
-                            class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-1.5 text-xs font-semibold"
-                            @click="void pasteCurrentClipboard()">
-                            {{ t('servers.pasteHere') }}
-                        </button>
-                        <button type="button"
-                            class="rounded-lg border border-(--status-deleted-border) bg-(--status-deleted-bg) px-3 py-1.5 text-xs font-semibold text-(--status-deleted-text)"
-                            @click="clearClipboardState">
-                            {{ t('servers.clearClipboard') }}
-                        </button>
                     </div>
-                    <div class="mt-3 flex flex-wrap gap-2">
+                    <div class="relative shrink-0">
                         <button type="button"
-                            class="rounded-lg bg-(--app-accent) px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="!canUploadSelectedLocalFile || !selectedServerId || isRemoteLoading"
-                            @click="uploadSelectedLocalFile">
-                            {{ t('servers.uploadSelected') }}
-                        </button>
-                        <button type="button"
-                            class="inline-flex items-center gap-1.5 rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="!canUploadSelectedLocalFile || !selectedServerId || isRemoteLoading"
-                            :title="t('servers.uploadAsVersionHint')"
-                            @click="openVersionUploadModal">
-                            <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M8 2v8M5 5l3-3 3 3"/><rect x="2" y="10" width="12" height="4" rx="1"/><path d="M5 12h2M9 12h2"/>
+                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-muted-surface) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                            :title="t('servers.actions')"
+                            @click.stop="localActionsMenuOpen = !localActionsMenuOpen">
+                            <svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+                                <circle cx="8" cy="3.5" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="8" cy="12.5" r="1.2"/>
                             </svg>
-                            {{ t('servers.uploadAsVersion') }}
                         </button>
-                        <button type="button"
-                            class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold"
-                            :disabled="!selectedLocalFile" @click="selectLocalEntry(selectedLocalFile!)">
-                            {{ t('servers.selectFile') }}
-                        </button>
+                        <div v-if="localActionsMenuOpen"
+                            class="absolute right-0 top-full z-40 mt-1 min-w-[11rem] rounded-lg border border-(--app-border) bg-(--app-surface) p-1 shadow-(--app-shadow)"
+                            @click.stop>
+                            <button type="button"
+                                class="block w-full rounded-md px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40 hover:bg-(--app-muted-surface)"
+                                :disabled="!canUploadSelectedLocalFile || !selectedServerId || isRemoteLoading"
+                                @click="localActionsMenuOpen = false; uploadSelectedLocalFile()">
+                                {{ t('servers.uploadSelected') }}
+                            </button>
+                            <button type="button"
+                                class="block w-full rounded-md px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40 hover:bg-(--app-muted-surface)"
+                                :disabled="!!activeVersionSession || !selectedServerId || isRemoteLoading"
+                                @click="localActionsMenuOpen = false; openVersionStartModal()">
+                                {{ activeVersionSession ? t('servers.versionActive') : t('servers.versionStart') }}
+                            </button>
+                            <button v-if="selectedLocalFile" type="button"
+                                class="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-(--app-muted-surface)"
+                                @click="localActionsMenuOpen = false; selectLocalEntry(selectedLocalFile!)">
+                                {{ t('servers.selectFile') }}
+                            </button>
+                            <template v-if="localClipboard || remoteClipboard">
+                                <div class="my-1 h-px bg-(--app-border)" />
+                                <button type="button"
+                                    class="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-(--app-muted-surface)"
+                                    @click="localActionsMenuOpen = false; void pasteCurrentClipboard()">
+                                    {{ t('servers.pasteHere') }}
+                                </button>
+                                <button type="button"
+                                    class="block w-full rounded-md px-3 py-2 text-left text-sm text-(--status-deleted-text) hover:bg-(--status-deleted-bg)"
+                                    @click="localActionsMenuOpen = false; clearClipboardState()">
+                                    {{ t('servers.clearClipboard') }}
+                                </button>
+                            </template>
+                        </div>
                     </div>
                 </div>
 
@@ -226,17 +229,13 @@
 
             <article
                 class="relative rounded-2xl border border-(--app-border) bg-(--app-elevated) p-4 shadow-(--app-shadow-sm)"
-                :class="isRemoteDropActive ? 'ring-2 ring-(--app-accent) ring-offset-2 ring-offset-transparent' : ''"
+                :class="(activeExplorerPane === 'remote' || isRemoteDropActive) ? 'ring-2 ring-(--app-accent) ring-offset-2 ring-offset-transparent' : ''"
                 @click="setActiveExplorerPane('remote')" @contextmenu.prevent="openContextMenu($event, 'remote')"
                 @dragover.prevent="handleRemoteDragOver" @dragleave="handleRemoteDragLeave"
                 @drop.prevent="handleRemoteDrop">
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
-                            t('servers.remoteFiles') }}</p>
-                        <p class="mt-1 text-sm text-(--app-muted)">{{ t('servers.remoteFilesDescription') }}</p>
-                        <p class="mt-1 text-xs text-(--app-muted)">{{ t('servers.dragDropHint') }}</p>
-                    </div>
+                    <p class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
+                        t('servers.remoteFiles') }}</p>
                     <div class="flex flex-wrap gap-2">
                         <select v-model.number="selectedServerId"
                             class="rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm"
@@ -247,9 +246,34 @@
                             </option>
                         </select>
                         <button type="button"
-                            class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-2 text-sm font-semibold"
-                            :disabled="!selectedServerId || isRemoteLoading" @click="loadRemoteFiles">
-                            {{ t('servers.refresh') }}
+                            class="flex items-center justify-center rounded-lg border p-2 transition disabled:opacity-50"
+                            :class="activeVersionSession
+                                ? 'border-amber-500 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
+                                : 'border-(--app-border) bg-(--app-muted-surface) text-(--app-muted) hover:border-(--app-accent) hover:text-(--app-accent)'"
+                            :disabled="!selectedServerId || isRemoteLoading"
+                            :title="activeVersionSession ? (activeVersionSession.label || t('servers.versionActiveUnlabeled')) : t('servers.versionStart')"
+                            @click="activeVersionSession ? void finishVersion() : openVersionStartModal()">
+                            <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 2v8M5 5l3-3 3 3"/><rect x="2" y="10" width="12" height="4" rx="1"/>
+                            </svg>
+                        </button>
+                        <button type="button"
+                            class="flex items-center justify-center rounded-lg border border-(--app-border) bg-(--app-muted-surface) p-2 text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent) disabled:opacity-50"
+                            :disabled="!selectedServerId"
+                            :title="t('servers.versionHistory')"
+                            @click="openVersionsHistory">
+                            <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                                <circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2 2"/>
+                            </svg>
+                        </button>
+                        <button type="button"
+                            class="flex items-center justify-center rounded-lg border border-(--app-border) bg-(--app-muted-surface) p-2 text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent) disabled:opacity-50"
+                            :disabled="!selectedServerId || isRemoteLoading"
+                            :title="t('servers.refresh') + ' (Ctrl+R)'"
+                            @click="loadRemoteFiles">
+                            <svg class="h-4 w-4" :class="isRemoteLoading ? 'animate-spin' : ''" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M13.5 8A5.5 5.5 0 1 1 10 3.07"/><path d="M13.5 2.5v3h-3"/>
+                            </svg>
                         </button>
                         <span v-if="activeRemoteEditSessionCount > 0"
                             class="rounded-lg border border-(--status-modified-border) bg-(--status-modified-soft) px-3 py-2 text-xs font-semibold text-(--status-modified-text)">
@@ -258,69 +282,72 @@
                     </div>
                 </div>
 
-                <div
-                    class="mt-3 rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-3 text-sm text-(--app-muted)">
-                    <p class="font-medium text-(--app-text)">{{ t('servers.uploadSelected') }}</p>
-                    <p class="mt-1 truncate">{{ selectedRemoteFileLabel }}</p>
-                    <div v-if="remoteClipboard || localClipboard" class="mt-2 flex flex-wrap items-center gap-2">
-                        <span v-if="remoteClipboard" class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                <!-- Remote selection bar + actions popup -->
+                <div class="mt-3 flex items-center gap-2">
+                    <div class="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-2.5 py-1.5">
+                        <span class="min-w-0 flex-1 truncate text-xs text-(--app-muted)">{{ selectedRemoteFileLabel }}</span>
+                        <span v-if="remoteClipboard"
+                            class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
                             :class="remoteClipboard.mode === 'cut' ? 'bg-(--status-deleted-bg) text-(--status-deleted-text)' : 'bg-(--status-modified-soft) text-(--status-modified-text)'">
-                            {{ remoteClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy')
-                            }}
-                            {{ remoteClipboard.entries.length }}
+                            {{ remoteClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy') }} {{ remoteClipboard.entries.length }}
                         </span>
-                        <span v-else-if="localClipboard" class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                        <span v-else-if="localClipboard"
+                            class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
                             :class="localClipboard.mode === 'cut' ? 'bg-(--status-deleted-bg) text-(--status-deleted-text)' : 'bg-(--status-modified-soft) text-(--status-modified-text)'">
-                            {{ localClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy') }}
-                            {{ localClipboard.entries.length }}
+                            {{ localClipboard.mode === 'cut' ? t('servers.clipboardCut') : t('servers.clipboardCopy') }} {{ localClipboard.entries.length }}
                         </span>
-                        <button type="button"
-                            class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-1.5 text-xs font-semibold"
-                            @click="void pasteCurrentClipboard()">
-                            {{ t('servers.pasteHere') }}
-                        </button>
-                        <button type="button"
-                            class="rounded-lg border border-(--status-deleted-border) bg-(--status-deleted-bg) px-3 py-1.5 text-xs font-semibold text-(--status-deleted-text)"
-                            @click="clearClipboardState">
-                            {{ t('servers.clearClipboard') }}
-                        </button>
                     </div>
-                    <div class="mt-3 flex flex-wrap gap-2">
+                    <div class="relative shrink-0">
                         <button type="button"
-                            class="rounded-lg bg-(--app-accent) px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="!canUploadSelectedLocalFile || !selectedServerId || isRemoteLoading"
-                            @click="uploadSelectedLocalFile">
-                            {{ t('servers.uploadSelected') }}
-                        </button>
-                        <button type="button"
-                            class="inline-flex items-center gap-1.5 rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="!canUploadSelectedLocalFile || !selectedServerId || isRemoteLoading"
-                            :title="t('servers.uploadAsVersionHint')"
-                            @click="openVersionUploadModal">
-                            <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M8 2v8M5 5l3-3 3 3"/><rect x="2" y="10" width="12" height="4" rx="1"/><path d="M5 12h2M9 12h2"/>
+                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-(--app-border) bg-(--app-muted-surface) text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                            :title="t('servers.actions')"
+                            @click.stop="remoteActionsMenuOpen = !remoteActionsMenuOpen">
+                            <svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+                                <circle cx="8" cy="3.5" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="8" cy="12.5" r="1.2"/>
                             </svg>
-                            {{ t('servers.uploadAsVersion') }}
                         </button>
-                        <button type="button"
-                            class="inline-flex items-center gap-1.5 rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="!selectedServerId"
-                            @click="openVersionsHistory">
-                            <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                                <circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2 2"/>
-                            </svg>
-                            {{ t('servers.versionHistory') }}
-                        </button>
-                        <button type="button"
-                            class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold"
-                            :disabled="!selectedServerId" @click="createRemoteFolder">
-                            {{ t('servers.newFolder') }}
-                        </button>
-                        <button type="button"
-                            class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold"
-                            :disabled="!selectedServerId" @click="createRemoteFile">
-                            {{ t('servers.newFile') }}
-                        </button>
+                        <div v-if="remoteActionsMenuOpen"
+                            class="absolute right-0 top-full z-40 mt-1 min-w-[11rem] rounded-lg border border-(--app-border) bg-(--app-surface) p-1 shadow-(--app-shadow)"
+                            @click.stop>
+                            <button type="button"
+                                class="block w-full rounded-md px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40 hover:bg-(--app-muted-surface)"
+                                :disabled="!canUploadSelectedLocalFile || !selectedServerId || isRemoteLoading"
+                                @click="remoteActionsMenuOpen = false; uploadSelectedLocalFile()">
+                                {{ t('servers.uploadSelected') }}
+                            </button>
+                            <button type="button"
+                                class="block w-full rounded-md px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40 hover:bg-(--app-muted-surface)"
+                                :disabled="!!activeVersionSession || !selectedServerId || isRemoteLoading"
+                                @click="remoteActionsMenuOpen = false; openVersionStartModal()">
+                                {{ activeVersionSession ? t('servers.versionActive') : t('servers.versionStart') }}
+                            </button>
+                            <div class="my-1 h-px bg-(--app-border)" />
+                            <button type="button"
+                                class="block w-full rounded-md px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40 hover:bg-(--app-muted-surface)"
+                                :disabled="!selectedServerId"
+                                @click="remoteActionsMenuOpen = false; createRemoteFolder()">
+                                {{ t('servers.newFolder') }}
+                            </button>
+                            <button type="button"
+                                class="block w-full rounded-md px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40 hover:bg-(--app-muted-surface)"
+                                :disabled="!selectedServerId"
+                                @click="remoteActionsMenuOpen = false; createRemoteFile()">
+                                {{ t('servers.newFile') }}
+                            </button>
+                            <template v-if="remoteClipboard || localClipboard">
+                                <div class="my-1 h-px bg-(--app-border)" />
+                                <button type="button"
+                                    class="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-(--app-muted-surface)"
+                                    @click="remoteActionsMenuOpen = false; void pasteCurrentClipboard()">
+                                    {{ t('servers.pasteHere') }}
+                                </button>
+                                <button type="button"
+                                    class="block w-full rounded-md px-3 py-2 text-left text-sm text-(--status-deleted-text) hover:bg-(--status-deleted-bg)"
+                                    @click="remoteActionsMenuOpen = false; clearClipboardState()">
+                                    {{ t('servers.clearClipboard') }}
+                                </button>
+                            </template>
+                        </div>
                     </div>
                 </div>
 
@@ -566,53 +593,70 @@
             <p v-else class="mt-3 text-sm text-(--app-muted)">{{ t('servers.noTransferLog') }}</p>
         </section>
 
-        <!-- Conflict Modal -->
-        <!-- Version Upload Modal -->
-        <div v-if="versionUploadModalVisible"
+        <!-- Version Start Modal -->
+        <div v-if="versionStartModalVisible"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            @click.self="versionUploadModalVisible = false">
+            @click.self="versionStartModalVisible = false">
             <div class="w-full max-w-md rounded-2xl border border-(--app-border) bg-(--app-surface) p-6 shadow-(--app-shadow)">
                 <div class="flex items-center gap-3">
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--app-accent)/15 text-(--app-accent)">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-500">
                         <svg class="h-5 w-5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M8 2v8M5 5l3-3 3 3"/><rect x="2" y="10" width="12" height="4" rx="1"/>
                         </svg>
                     </span>
                     <div>
-                        <h2 class="text-base font-semibold text-(--app-text)">{{ t('servers.uploadAsVersion') }}</h2>
-                        <p class="text-sm text-(--app-muted)">{{ t('servers.uploadAsVersionDesc') }}</p>
+                        <h2 class="text-base font-semibold text-(--app-text)">{{ t('servers.versionStart') }}</h2>
+                        <p class="text-sm text-(--app-muted)">{{ t('servers.versionActiveUnlabeled') }}</p>
                     </div>
                 </div>
 
-                <div class="mt-4 rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-3 text-xs text-(--app-muted) space-y-0.5">
-                    <p class="font-semibold text-(--app-text)">{{ t('servers.versionFiles', { count: selectedLocalEntries.filter(e => !e.isDirectory).length }) }}</p>
-                    <p v-for="f in selectedLocalEntries.filter(e => !e.isDirectory).slice(0, 5)" :key="f.path" class="truncate">{{ f.name }}</p>
-                    <p v-if="selectedLocalEntries.filter(e => !e.isDirectory).length > 5" class="italic">…</p>
-                </div>
-
                 <label class="mt-4 block">
-                    <span class="mb-1 block text-xs font-medium text-(--app-muted) uppercase tracking-wide">{{ t('servers.versionLabel') }}</span>
-                    <input v-model="versionUploadLabel" type="text"
+                    <span class="mb-1 block text-xs font-medium text-(--app-muted) uppercase tracking-wide">{{ t('servers.versionStartLabel') }}</span>
+                    <input v-model="versionStartLabel" type="text"
                         class="w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
-                        :placeholder="t('servers.versionLabelPlaceholder')"
-                        @keyup.enter="submitVersionUpload" @keyup.escape="versionUploadModalVisible = false" />
+                        :placeholder="t('servers.versionStartLabelPlaceholder')"
+                        autofocus
+                        @keyup.enter="submitVersionStart" @keyup.escape="versionStartModalVisible = false" />
                 </label>
-
-                <p v-if="versionUploadError" class="mt-3 rounded-lg border border-(--status-deleted-border) bg-(--status-deleted-bg) px-3 py-2 text-xs text-(--status-deleted-text)">{{ versionUploadError }}</p>
 
                 <div class="mt-5 flex justify-end gap-2">
                     <button type="button"
                         class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-4 py-2 text-sm font-semibold text-(--app-text) transition hover:bg-(--app-muted-surface)"
-                        :disabled="versionUploading"
-                        @click="versionUploadModalVisible = false">{{ t('common.cancel') }}</button>
+                        :disabled="versionStarting"
+                        @click="versionStartModalVisible = false">{{ t('common.cancel') }}</button>
                     <button type="button"
-                        class="inline-flex items-center gap-2 rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                        :disabled="versionUploading"
-                        @click="submitVersionUpload">
-                        <svg v-if="versionUploading" class="h-4 w-4 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6" opacity=".3"/><path d="M14 8a6 6 0 0 1-6 6"/></svg>
-                        {{ versionUploading ? t('servers.versionCreating') : t('servers.versionCreate') }}
+                        class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:opacity-60"
+                        :disabled="versionStarting"
+                        @click="submitVersionStart">
+                        <svg v-if="versionStarting" class="h-4 w-4 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6" opacity=".3"/><path d="M14 8a6 6 0 0 1-6 6"/></svg>
+                        {{ versionStarting ? t('servers.versionStarting') : t('servers.versionStartBtn') }}
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Active Version Session Banner -->
+        <div v-if="activeVersionSession"
+            class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 flex items-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-5 py-3 shadow-lg backdrop-blur-sm">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-amber-500 animate-pulse"/>
+            <div class="min-w-0">
+                <p class="text-sm font-semibold text-amber-600 dark:text-amber-400">{{ t('servers.versionActive') }}</p>
+                <p class="text-xs text-(--app-muted)">
+                    {{ activeVersionSession.label ? t('servers.versionActiveLabel', { label: activeVersionSession.label }) : t('servers.versionActiveUnlabeled') }}
+                    · {{ t('servers.versionActiveBacked', { count: activeVersionSession.backedCount }) }}
+                </p>
+            </div>
+            <div class="flex shrink-0 gap-2">
+                <button type="button"
+                    class="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600"
+                    @click="void finishVersion()">
+                    {{ t('servers.versionFinish') }}
+                </button>
+                <button type="button"
+                    class="rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs font-semibold text-amber-600 transition hover:bg-amber-500/10 dark:text-amber-400"
+                    @click="void abortVersion()">
+                    {{ t('servers.versionAbort') }}
+                </button>
             </div>
         </div>
 
@@ -864,7 +908,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { listServers, localFilesService, remoteFilesService, listVersions, createVersion, rollbackVersion, deleteVersion, type GetAllServersResponseDto, type VersionDto } from '../services/api';
+import { listServers, localFilesService, remoteFilesService, listVersions, startVersionSession, backupFileForVersion, finishVersionSession, abortVersionSession, rollbackVersion, deleteVersion, type GetAllServersResponseDto, type VersionDto } from '../services/api';
 
 type ExplorerEntry = {
     name: string;
@@ -1017,54 +1061,61 @@ function deleteModalCancel(): void {
     r?.(false);
 }
 
-// Version state
-const versionUploadModalVisible = ref(false);
-const versionUploadLabel = ref('');
-const versionUploading = ref(false);
-const versionUploadError = ref('');
+// Version session state
+const versionStartModalVisible = ref(false);
+const versionStartLabel = ref('');
+const versionStarting = ref(false);
+const activeVersionSession = ref<{ id: number; label: string; backedCount: number } | null>(null);
 const versionsHistoryModalVisible = ref(false);
 const versionsHistoryList = ref<VersionDto[]>([]);
 const versionsHistoryLoading = ref(false);
 const versionsRollingBack = ref<Record<number, boolean>>({});
 const versionsDeleting = ref<Record<number, boolean>>({});
 const versionsRollbackError = ref('');
+const localActionsMenuOpen = ref(false);
+const remoteActionsMenuOpen = ref(false);
 
-function openVersionUploadModal(): void {
-    versionUploadLabel.value = '';
-    versionUploadError.value = '';
-    versionUploadModalVisible.value = true;
+function openVersionStartModal(): void {
+    versionStartLabel.value = '';
+    versionStartModalVisible.value = true;
 }
 
-async function submitVersionUpload(): Promise<void> {
+async function submitVersionStart(): Promise<void> {
     if (!selectedServerId.value) return;
-    const files = selectedLocalEntries.value.filter(e => !e.isDirectory);
-    if (files.length === 0) return;
-    versionUploading.value = true;
-    versionUploadError.value = '';
+    versionStarting.value = true;
     try {
-        const filesToBackup: string[] = [];
-        const filesToUpload: Array<{ remotePath: string; contentBase64: string }> = [];
-        for (const file of files) {
-            const remoteDestPath = joinRemotePath(remotePath.value || '/', file.name);
-            filesToBackup.push(remoteDestPath);
-            const contentBase64 = await localFilesService.readFile(file.path);
-            filesToUpload.push({ remotePath: remoteDestPath, contentBase64 });
-        }
-        const label = versionUploadLabel.value.trim() || undefined;
-        await createVersion({
-            serverId: selectedServerId.value,
-            baseRemotePath: remotePath.value || '/',
-            label,
-            filesToBackup,
-            filesToUpload,
-        });
-        versionUploadModalVisible.value = false;
-        pushTransferLog(t('servers.versionCreated', { label: label ?? '' }), 'success');
-        await loadRemoteFiles();
-    } catch (err: any) {
-        versionUploadError.value = err?.message ?? String(err);
+        const label = versionStartLabel.value.trim() || undefined;
+        const result = await startVersionSession({ serverId: selectedServerId.value, label });
+        activeVersionSession.value = { id: result.id, label: label ?? '', backedCount: 0 };
+        versionStartModalVisible.value = false;
+        pushTransferLog(t('servers.versionActive'), 'info');
     } finally {
-        versionUploading.value = false;
+        versionStarting.value = false;
+    }
+}
+
+async function finishVersion(): Promise<void> {
+    if (!activeVersionSession.value) return;
+    await finishVersionSession(activeVersionSession.value.id);
+    pushTransferLog(t('servers.versionFinish'), 'success');
+    activeVersionSession.value = null;
+}
+
+async function abortVersion(): Promise<void> {
+    if (!activeVersionSession.value) return;
+    await abortVersionSession(activeVersionSession.value.id);
+    pushTransferLog(t('servers.versionAbort'), 'info');
+    activeVersionSession.value = null;
+}
+
+async function backupBeforeUpload(remotePath: string): Promise<void> {
+    const session = activeVersionSession.value;
+    if (!session || !selectedServerId.value) return;
+    try {
+        const result = await backupFileForVersion({ versionId: session.id, serverId: selectedServerId.value, remotePath });
+        if (result.backed) activeVersionSession.value = { ...session, backedCount: session.backedCount + 1 };
+    } catch {
+        // non-blocking — upload continues even if backup fails
     }
 }
 
@@ -1074,7 +1125,7 @@ async function openVersionsHistory(): Promise<void> {
     versionsHistoryLoading.value = true;
     versionsHistoryModalVisible.value = true;
     try {
-        versionsHistoryList.value = await listVersions(selectedServerId.value, remotePath.value || '/');
+        versionsHistoryList.value = await listVersions(selectedServerId.value);
     } finally {
         versionsHistoryLoading.value = false;
     }
@@ -2115,15 +2166,12 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
         return;
     }
 
-    // F5 or Ctrl+R → refresh active pane
+    // F5 or Ctrl+R → refresh both panes
     const isRefresh = event.key === 'F5' || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'r');
     if (isRefresh) {
         event.preventDefault();
-        if (activeExplorerPane.value === 'local') {
-            void loadLocalFiles();
-        } else {
-            void loadRemoteFiles();
-        }
+        void loadLocalFiles();
+        void loadRemoteFiles();
         return;
     }
 
@@ -2237,6 +2285,7 @@ async function pasteLocalEntryToRemoteRecursive(
     }
 
     const contentBase64 = await localFilesService.readFile(sourceEntry.path);
+    await backupBeforeUpload(resolvedDestinationPath);
     await remoteFilesService.uploadRemoteFile(selectedServerId.value, resolvedDestinationPath, contentBase64, getCredentialOverride());
 }
 
@@ -2771,6 +2820,8 @@ async function handleRemoteDrop(event: DragEvent): Promise<void> {
 function closeContextMenu(): void {
     contextMenu.value.visible = false;
     contextMenu.value.entry = null;
+    localActionsMenuOpen.value = false;
+    remoteActionsMenuOpen.value = false;
 }
 
 function openContextMenu(event: MouseEvent, scope: ContextMenuScope, entry: ExplorerEntry | null = null): void {
@@ -3185,6 +3236,8 @@ async function uploadSelectedLocalFile(): Promise<void> {
             const contentBase64 = await localFilesService.readFile(sourceFile.path);
             setProgress(45);
             throwIfCancelled();
+
+            await backupBeforeUpload(resolvedRemotePath);
 
             await remoteFilesService.uploadRemoteFile(
                 selectedServerId.value!,

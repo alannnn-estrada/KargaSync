@@ -188,17 +188,29 @@ export type {
     UpdateSettingsResponseDto,
 };
 
-export const listVersions = (serverId: number, baseRemotePath: string) =>
-    getRendererApi().listVersions(serverId, baseRemotePath);
+export const listVersions = (serverId: number) =>
+    getRendererApi().listVersions(serverId);
 
-export const createVersion = (input: import('../../shared/ipc/contracts').CreateVersionInput) =>
-    getRendererApi().createVersion(input);
+export const startVersionSession = (input: import('../../shared/ipc/contracts').StartVersionInput) =>
+    getRendererApi().startVersionSession(input);
+
+export const backupFileForVersion = (input: import('../../shared/ipc/contracts').BackupFileForVersionInput) =>
+    getRendererApi().backupFileForVersion(input);
+
+export const finishVersionSession = (versionId: number) =>
+    getRendererApi().finishVersionSession(versionId);
+
+export const abortVersionSession = (versionId: number) =>
+    getRendererApi().abortVersionSession(versionId);
 
 export const rollbackVersion = (versionId: number) =>
     getRendererApi().rollbackVersion(versionId);
 
 export const deleteVersion = (versionId: number) =>
     getRendererApi().deleteVersion(versionId);
+
+export const chooseKeyFile = () =>
+    getRendererApi().chooseKeyFile();
 
 export type { VersionDto } from '../../shared/ipc/contracts';
 

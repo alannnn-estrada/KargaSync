@@ -151,7 +151,7 @@ const applyVersionsMigration = (db: SqliteDatabase) => {
             CREATE TABLE IF NOT EXISTS versions (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               server_id INTEGER NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
-              remote_path TEXT NOT NULL,
+              remote_path TEXT NOT NULL DEFAULT '/',
               label TEXT,
               status TEXT NOT NULL CHECK(status IN ('pending','running','completed','failed')) DEFAULT 'pending',
               storage_path TEXT NOT NULL,
@@ -161,8 +161,26 @@ const applyVersionsMigration = (db: SqliteDatabase) => {
               created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
               finished_at TEXT
             );
-            CREATE INDEX IF NOT EXISTS idx_versions_server_remote
-              ON versions(server_id, remote_path, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_versions_server_created
+              ON versions(server_id, created_at DESC);
+        `);
+    }
+
+    const hasFilesTable = db
+        .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='version_files' LIMIT 1")
+        .get() as { '1': number } | undefined;
+
+    if (!hasFilesTable) {
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS version_files (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              version_id INTEGER NOT NULL REFERENCES versions(id) ON DELETE CASCADE,
+              remote_path TEXT NOT NULL,
+              local_path TEXT NOT NULL,
+              size_bytes INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS idx_version_files_version_id
+              ON version_files(version_id);
         `);
     }
 
