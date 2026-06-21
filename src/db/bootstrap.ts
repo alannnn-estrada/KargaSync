@@ -141,6 +141,40 @@ const applyServerModelMigration = (db: SqliteDatabase) => {
     }
 };
 
+const applyVersionsMigration = (db: SqliteDatabase) => {
+    const hasTable = db
+        .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='versions' LIMIT 1")
+        .get() as { '1': number } | undefined;
+
+    if (!hasTable) {
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS versions (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              server_id INTEGER NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+              remote_path TEXT NOT NULL,
+              label TEXT,
+              status TEXT NOT NULL CHECK(status IN ('pending','running','completed','failed')) DEFAULT 'pending',
+              storage_path TEXT NOT NULL,
+              file_count INTEGER NOT NULL DEFAULT 0,
+              bytes_stored INTEGER NOT NULL DEFAULT 0,
+              error_message TEXT,
+              created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              finished_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_versions_server_remote
+              ON versions(server_id, remote_path, created_at DESC);
+        `);
+    }
+
+    const applied = db
+        .prepare('SELECT 1 FROM schema_migrations WHERE version = ? LIMIT 1')
+        .get(3) as { '1': number } | undefined;
+
+    if (!applied) {
+        db.prepare('INSERT INTO schema_migrations (version, name) VALUES (?, ?)').run(3, 'versions_table');
+    }
+};
+
 export function initializeDatabase(options: InitializeDatabaseOptions): DatabaseHandle {
     ensureDirectory(options.filePath);
 
@@ -169,6 +203,7 @@ export function initializeDatabase(options: InitializeDatabaseOptions): Database
 
     recordInitialMigration(db);
     applyServerModelMigration(db);
+    applyVersionsMigration(db);
 
     const credentials = createCredentialManager({
         fallbackFilePath: path.join(path.dirname(options.filePath), 'credential-store.json'),

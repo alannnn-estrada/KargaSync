@@ -139,5 +139,8 @@ Electron auto-opens DevTools in detached mode in dev builds. `app.firstWindow()`
 ### playwright fails with single-instance lock when app already running
 `requestSingleInstanceLock()` returns false → app quits immediately. Launch with `--user-data-dir=<tmp>` to bypass the lock and run a second instance for testing.
 
+### Versioning: versions table is separate from backups
+The `backups` table has `project_id NOT NULL` and was designed for per-project backups. The new versioning system uses a separate `versions` table (server_id + remote_path as key, no project required). Rollback walks the local backup folder and re-uploads each file. `pushTransferLog` signature is `(message: string, level?, operationId?)` — positional, not object.
+
 ### Sidebar collapsed overflow — FIXED
 When `isSidebarCollapsed=true`, the old markup tried to reuse expanded layout with conditional Tailwind classes. Two bugs: (1) `px-2.5 py-2.5 md:w-11` on nav links — 32px icon + 20px padding = 52px but w-11=44px; (2) two `h-9 w-9` buttons side by side (76px) in 44px content area. Fixed by using separate `<template v-if>` blocks for expanded vs collapsed header, and `justify-center p-2 w-full` on nav items in collapsed mode.

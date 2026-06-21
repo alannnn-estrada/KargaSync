@@ -125,9 +125,9 @@
                     <p class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{ t('servers.list')
                         }}</p>
                     <button type="button"
-                        class="rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-(--app-text) transition hover:border-(--app-accent)"
-                        :disabled="isLoading" @click="loadServers">
-                        {{ t('servers.refresh') }}
+                        class="flex items-center justify-center rounded-lg border border-(--app-border) bg-(--app-muted-surface) p-1.5 text-(--app-text) transition hover:border-(--app-accent) disabled:opacity-50"
+                        :disabled="isLoading" :title="t('servers.refresh')" @click="loadServers">
+                        <RefreshCw class="h-4 w-4" :class="isLoading ? 'animate-spin' : ''" />
                     </button>
                 </div>
 
@@ -173,6 +173,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { RefreshCw } from '@lucide/vue';
 
 import { useApi } from '../composables';
 import type { GetAllServersResponseDto } from '../services/api';

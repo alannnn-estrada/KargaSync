@@ -55,6 +55,11 @@ const api: RendererApi = {
     createRemoteFile: (serverId: number, remotePath: string, credentialOverride?: string | { username?: string; password?: string }) => ipcRenderer.invoke(REMOTE_FILE_CHANNELS.createFile, serverId, remotePath, credentialOverride),
     renameRemotePath: (serverId: number, sourcePath: string, targetPath: string, credentialOverride?: string | { username?: string; password?: string }) => ipcRenderer.invoke(REMOTE_FILE_CHANNELS.rename, serverId, sourcePath, targetPath, credentialOverride),
     openRemoteFileExternal: (localPath: string) => ipcRenderer.invoke(REMOTE_FILE_CHANNELS.openExternal, localPath),
+    // Versions
+    listVersions: (serverId, baseRemotePath) => ipcRenderer.invoke(IPC_CHANNELS.versionsList, serverId, baseRemotePath),
+    createVersion: (input) => ipcRenderer.invoke(IPC_CHANNELS.versionsCreate, input),
+    rollbackVersion: (versionId) => ipcRenderer.invoke(IPC_CHANNELS.versionsRollback, versionId),
+    deleteVersion: (versionId) => ipcRenderer.invoke(IPC_CHANNELS.versionsDelete, versionId),
 };
 
 contextBridge.exposeInMainWorld('api', Object.freeze(api));

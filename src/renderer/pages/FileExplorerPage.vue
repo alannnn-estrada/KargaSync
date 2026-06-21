@@ -75,6 +75,16 @@
                             {{ t('servers.uploadSelected') }}
                         </button>
                         <button type="button"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="!canUploadSelectedLocalFile || !selectedServerId || isRemoteLoading"
+                            :title="t('servers.uploadAsVersionHint')"
+                            @click="openVersionUploadModal">
+                            <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 2v8M5 5l3-3 3 3"/><rect x="2" y="10" width="12" height="4" rx="1"/><path d="M5 12h2M9 12h2"/>
+                            </svg>
+                            {{ t('servers.uploadAsVersion') }}
+                        </button>
+                        <button type="button"
                             class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold"
                             :disabled="!selectedLocalFile" @click="selectLocalEntry(selectedLocalFile!)">
                             {{ t('servers.selectFile') }}
@@ -281,6 +291,25 @@
                             :disabled="!canUploadSelectedLocalFile || !selectedServerId || isRemoteLoading"
                             @click="uploadSelectedLocalFile">
                             {{ t('servers.uploadSelected') }}
+                        </button>
+                        <button type="button"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="!canUploadSelectedLocalFile || !selectedServerId || isRemoteLoading"
+                            :title="t('servers.uploadAsVersionHint')"
+                            @click="openVersionUploadModal">
+                            <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 2v8M5 5l3-3 3 3"/><rect x="2" y="10" width="12" height="4" rx="1"/><path d="M5 12h2M9 12h2"/>
+                            </svg>
+                            {{ t('servers.uploadAsVersion') }}
+                        </button>
+                        <button type="button"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="!selectedServerId"
+                            @click="openVersionsHistory">
+                            <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                                <circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2 2"/>
+                            </svg>
+                            {{ t('servers.versionHistory') }}
                         </button>
                         <button type="button"
                             class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold"
@@ -538,61 +567,266 @@
         </section>
 
         <!-- Conflict Modal -->
-        <div v-if="conflictModalVisible"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div
-                class="w-full max-w-lg rounded-lg border border-(--app-border) bg-(--app-surface) p-6 shadow-(--app-shadow)">
-                <h2 class="text-lg font-semibold text-(--app-text)">{{ t('servers.conflictModalTitle') }}</h2>
-                <p class="mt-2 text-sm text-(--app-muted)">{{ t('servers.conflictModalDescription') }}</p>
-
-                <div
-                    class="mt-4 rounded-lg border border-(--app-border) bg-(--app-muted-surface) p-3 text-xs text-(--app-muted)">
-                    <p><span class="font-semibold text-(--app-text)">{{ t('servers.conflictSource') }}:</span> {{
-                        conflictModalSourceEntry?.name }}</p>
-                    <p class="mt-1"><span class="font-semibold text-(--app-text)">{{ t('servers.conflictTarget')
-                            }}:</span> {{ conflictModalTargetEntry?.name }}</p>
-                    <p class="mt-1"><span class="font-semibold text-(--app-text)">{{ t('servers.conflictDestination')
-                            }}:</span> {{ conflictModalDestinationPath }}</p>
+        <!-- Version Upload Modal -->
+        <div v-if="versionUploadModalVisible"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            @click.self="versionUploadModalVisible = false">
+            <div class="w-full max-w-md rounded-2xl border border-(--app-border) bg-(--app-surface) p-6 shadow-(--app-shadow)">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--app-accent)/15 text-(--app-accent)">
+                        <svg class="h-5 w-5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M8 2v8M5 5l3-3 3 3"/><rect x="2" y="10" width="12" height="4" rx="1"/>
+                        </svg>
+                    </span>
+                    <div>
+                        <h2 class="text-base font-semibold text-(--app-text)">{{ t('servers.uploadAsVersion') }}</h2>
+                        <p class="text-sm text-(--app-muted)">{{ t('servers.uploadAsVersionDesc') }}</p>
+                    </div>
                 </div>
 
-                <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                    <button type="button"
-                        class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold text-left"
-                        @click="confirmConflictModal('overwrite')">
-                        {{ t('servers.conflictOverwrite') }}
-                    </button>
-                    <button type="button"
-                        class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold text-left"
-                        @click="confirmConflictModal('skip')">
-                        {{ t('servers.conflictSkip') }}
-                    </button>
-                    <button type="button"
-                        class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold text-left"
-                        @click="confirmConflictModal('rename-auto')">
-                        {{ t('servers.conflictRenameAuto') }}
-                    </button>
-                    <button type="button"
-                        class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold text-left"
-                        @click="confirmConflictModal('overwrite-if-newer')">
-                        {{ t('servers.conflictOverwriteIfNewer') }}
-                    </button>
-                    <button type="button"
-                        class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-2 text-sm font-semibold text-left sm:col-span-2"
-                        @click="confirmConflictModal('overwrite-if-size-different')">
-                        {{ t('servers.conflictOverwriteIfSizeDifferent') }}
-                    </button>
+                <div class="mt-4 rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-3 text-xs text-(--app-muted) space-y-0.5">
+                    <p class="font-semibold text-(--app-text)">{{ t('servers.versionFiles', { count: selectedLocalEntries.filter(e => !e.isDirectory).length }) }}</p>
+                    <p v-for="f in selectedLocalEntries.filter(e => !e.isDirectory).slice(0, 5)" :key="f.path" class="truncate">{{ f.name }}</p>
+                    <p v-if="selectedLocalEntries.filter(e => !e.isDirectory).length > 5" class="italic">…</p>
                 </div>
 
-                <label class="mt-4 flex items-center gap-2 text-sm text-(--app-text)">
-                    <input v-model="conflictModalApplyToAll" type="checkbox"
-                        class="h-4 w-4 rounded border border-(--app-border) bg-(--app-input)" />
-                    <span>{{ t('servers.conflictApplyToAll') }}</span>
+                <label class="mt-4 block">
+                    <span class="mb-1 block text-xs font-medium text-(--app-muted) uppercase tracking-wide">{{ t('servers.versionLabel') }}</span>
+                    <input v-model="versionUploadLabel" type="text"
+                        class="w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
+                        :placeholder="t('servers.versionLabelPlaceholder')"
+                        @keyup.enter="submitVersionUpload" @keyup.escape="versionUploadModalVisible = false" />
                 </label>
 
-                <div class="mt-5 flex justify-end">
+                <p v-if="versionUploadError" class="mt-3 rounded-lg border border-(--status-deleted-border) bg-(--status-deleted-bg) px-3 py-2 text-xs text-(--status-deleted-text)">{{ versionUploadError }}</p>
+
+                <div class="mt-5 flex justify-end gap-2">
                     <button type="button"
-                        class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-4 py-2 text-sm font-semibold"
+                        class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-4 py-2 text-sm font-semibold text-(--app-text) transition hover:bg-(--app-muted-surface)"
+                        :disabled="versionUploading"
+                        @click="versionUploadModalVisible = false">{{ t('common.cancel') }}</button>
+                    <button type="button"
+                        class="inline-flex items-center gap-2 rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                        :disabled="versionUploading"
+                        @click="submitVersionUpload">
+                        <svg v-if="versionUploading" class="h-4 w-4 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6" opacity=".3"/><path d="M14 8a6 6 0 0 1-6 6"/></svg>
+                        {{ versionUploading ? t('servers.versionCreating') : t('servers.versionCreate') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Versions History Modal -->
+        <div v-if="versionsHistoryModalVisible"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            @click.self="versionsHistoryModalVisible = false">
+            <div class="flex w-full max-w-2xl flex-col rounded-2xl border border-(--app-border) bg-(--app-surface) shadow-(--app-shadow)" style="max-height: 85vh;">
+                <div class="flex items-center gap-3 border-b border-(--app-border) p-5">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--app-accent)/15 text-(--app-accent)">
+                        <svg class="h-5 w-5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2 2"/></svg>
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <h2 class="text-base font-semibold text-(--app-text)">{{ t('servers.versionHistory') }}</h2>
+                        <p class="truncate text-sm text-(--app-muted)">{{ remotePath || '/' }}</p>
+                    </div>
+                    <button type="button" class="rounded-lg p-1.5 text-(--app-muted) hover:text-(--app-text)" @click="versionsHistoryModalVisible = false">
+                        <svg class="h-5 w-5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg>
+                    </button>
+                </div>
+
+                <div class="min-h-0 flex-1 overflow-y-auto p-4">
+                    <p v-if="versionsHistoryLoading" class="text-center text-sm text-(--app-muted) py-8">{{ t('servers.versionLoading') }}</p>
+                    <p v-else-if="versionsHistoryList.length === 0" class="text-center text-sm text-(--app-muted) py-8">{{ t('servers.versionEmpty') }}</p>
+                    <p v-if="versionsRollbackError" class="mb-3 rounded-lg border border-(--status-deleted-border) bg-(--status-deleted-bg) px-3 py-2 text-xs text-(--status-deleted-text)">{{ versionsRollbackError }}</p>
+
+                    <ul v-if="!versionsHistoryLoading" class="space-y-2">
+                        <li v-for="v in versionsHistoryList" :key="v.id"
+                            class="rounded-xl border border-(--app-border) bg-(--app-elevated) p-4">
+                            <div class="flex items-start gap-3">
+                                <span class="mt-0.5 h-2 w-2 shrink-0 rounded-full"
+                                    :class="v.status === 'completed' ? 'bg-(--status-added-text)' : v.status === 'failed' ? 'bg-(--status-deleted-text)' : 'bg-(--app-muted)'"/>
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-medium text-(--app-text) text-sm">{{ v.label || t('servers.versionNoLabel') }}</p>
+                                    <p class="mt-0.5 text-xs text-(--app-muted)">
+                                        {{ formatRelativeDate(v.createdAt) }} · {{ t('servers.versionFilesCount', { count: v.fileCount }) }} · {{ formatFileSize(v.bytesStored) }}
+                                    </p>
+                                    <p v-if="v.errorMessage" class="mt-1 text-xs text-(--status-deleted-text) break-all">{{ v.errorMessage }}</p>
+                                </div>
+                                <div class="flex shrink-0 gap-1.5">
+                                    <button type="button"
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-1.5 text-xs font-semibold text-(--app-text) transition hover:border-(--app-accent) hover:text-(--app-accent) disabled:opacity-50"
+                                        :disabled="v.status !== 'completed' || versionsRollingBack[v.id] || versionsDeleting[v.id]"
+                                        @click="doRollbackVersion(v)">
+                                        <svg v-if="versionsRollingBack[v.id]" class="h-3.5 w-3.5 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6" opacity=".3"/><path d="M14 8a6 6 0 0 1-6 6"/></svg>
+                                        <svg v-else class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 8a6 6 0 1 0 1.5-3.9L2 2v4h4L4.5 4.5"/></svg>
+                                        {{ t('servers.versionRollback') }}
+                                    </button>
+                                    <button type="button"
+                                        class="rounded-lg border border-(--app-border) bg-(--app-elevated) p-1.5 text-(--status-deleted-text) transition hover:bg-(--status-deleted-bg) disabled:opacity-50"
+                                        :disabled="versionsDeleting[v.id] || versionsRollingBack[v.id]"
+                                        :title="t('servers.deleteModalConfirm')"
+                                        @click="doDeleteVersion(v)">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 5h8M6 5V3h4v2M5 5l.75 8h4.5L11 5"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div v-if="deleteModalVisible"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            @click.self="deleteModalCancel" @keyup.escape="deleteModalCancel">
+            <div class="w-full max-w-md rounded-2xl border border-(--app-border) bg-(--app-surface) p-6 shadow-(--app-shadow)">
+
+                <!-- Phase 1 -->
+                <template v-if="deleteModalPhase === 1">
+                    <div class="flex items-start gap-3">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                            :class="deleteModalEntry?.isDirectory ? 'bg-(--status-deleted-bg) text-(--status-deleted-text)' : 'bg-(--status-deleted-bg)/60 text-(--status-deleted-text)'">
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path v-if="deleteModalEntry?.isDirectory" d="M2 6a1 1 0 0 1 1-1h3l2-2h6a1 1 0 0 1 1 1v1H2ZM2 7h16l-1 10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1L2 7Z"/>
+                                <template v-else>
+                                    <polyline points="4 6 16 6"/><path d="M7 6V4h6v2M5 6l1 12h8l1-12"/>
+                                </template>
+                            </svg>
+                        </span>
+                        <div class="min-w-0">
+                            <h2 class="text-base font-semibold text-(--app-text)">{{ t('servers.deleteModalTitle') }}</h2>
+                            <p class="mt-1 break-all text-sm text-(--app-muted)">
+                                <span class="font-medium text-(--app-text)">{{ deleteModalEntry?.name }}</span>
+                            </p>
+                            <p v-if="deleteModalEntry?.isDirectory" class="mt-2 rounded-lg border border-(--status-deleted-border) bg-(--status-deleted-bg) px-3 py-2 text-xs font-medium text-(--status-deleted-text)">
+                                ⚠ {{ t('servers.deleteModalFolderWarning') }}
+                            </p>
+                            <p v-else class="mt-2 text-xs text-(--app-muted)">{{ t('servers.deleteModalIrreversible') }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button"
+                            class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-4 py-2 text-sm font-semibold text-(--app-text) transition hover:bg-(--app-muted-surface)"
+                            @click="deleteModalCancel">{{ t('common.cancel') }}</button>
+                        <button type="button"
+                            class="rounded-lg bg-(--status-deleted-text) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                            @click="deleteModalAdvance">
+                            {{ deleteModalEntry?.isDirectory ? t('servers.deleteModalContinue') : t('servers.deleteModalConfirm') }}
+                        </button>
+                    </div>
+                </template>
+
+                <!-- Phase 2: extra confirm for folders -->
+                <template v-else>
+                    <div class="flex items-start gap-3">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--status-deleted-bg) text-(--status-deleted-text)">
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 2a8 8 0 1 0 0 16A8 8 0 0 0 10 2Zm0 5v4m0 3v.5"/></svg>
+                        </span>
+                        <div>
+                            <h2 class="text-base font-semibold text-(--app-text)">{{ t('servers.deleteModalDoubleTitle') }}</h2>
+                            <p class="mt-1 text-sm text-(--app-muted)">{{ t('servers.deleteModalDoubleBody', { name: deleteModalEntry?.name }) }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button"
+                            class="rounded-lg border border-(--app-border) bg-(--app-elevated) px-4 py-2 text-sm font-semibold text-(--app-text) transition hover:bg-(--app-muted-surface)"
+                            @click="deleteModalCancel">{{ t('common.cancel') }}</button>
+                        <button type="button"
+                            class="rounded-lg bg-(--status-deleted-text) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                            @click="deleteModalConfirm">{{ t('servers.deleteModalFinal') }}</button>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Conflict Modal (FileZilla-style) -->
+        <div v-if="conflictModalVisible"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div class="w-full max-w-xl rounded-2xl border border-(--app-border) bg-(--app-surface) p-6 shadow-(--app-shadow)">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--status-modified-bg) text-(--status-modified-text)">
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 2a8 8 0 1 0 0 16A8 8 0 0 0 10 2Zm0 5v4m0 3v.5"/></svg>
+                    </span>
+                    <div>
+                        <h2 class="text-base font-semibold text-(--app-text)">{{ t('servers.conflictModalTitle') }}</h2>
+                        <p class="text-sm text-(--app-muted)">{{ t('servers.conflictModalDescription') }}</p>
+                    </div>
+                </div>
+
+                <!-- File comparison table -->
+                <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
+                    <div class="rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-3 space-y-1">
+                        <p class="font-semibold uppercase tracking-wide text-(--app-muted)">{{ t('servers.conflictSource') }}</p>
+                        <p class="font-medium text-(--app-text) break-all">{{ conflictModalSourceEntry?.name }}</p>
+                        <p class="text-(--app-muted)">{{ conflictModalSourceEntry?.size != null ? formatFileSize(conflictModalSourceEntry.size) : '—' }}</p>
+                        <p class="text-(--app-muted)">{{ conflictModalSourceEntry?.modifiedAt ? formatRelativeDate(conflictModalSourceEntry.modifiedAt) : '—' }}</p>
+                    </div>
+                    <div class="rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-3 space-y-1">
+                        <p class="font-semibold uppercase tracking-wide text-(--app-muted)">{{ t('servers.conflictTarget') }}</p>
+                        <p class="font-medium text-(--app-text) break-all">{{ conflictModalTargetEntry?.name }}</p>
+                        <p class="text-(--app-muted)">{{ conflictModalTargetEntry?.size != null ? formatFileSize(conflictModalTargetEntry.size) : '—' }}</p>
+                        <p class="flex items-center gap-1 text-(--app-muted)">
+                            {{ conflictModalTargetEntry?.modifiedAt ? formatRelativeDate(conflictModalTargetEntry.modifiedAt) : '—' }}
+                            <span v-if="conflictModalSourceEntry?.modifiedAt && conflictModalTargetEntry?.modifiedAt"
+                                class="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                                :class="new Date(conflictModalSourceEntry.modifiedAt) > new Date(conflictModalTargetEntry.modifiedAt)
+                                    ? 'bg-(--status-deleted-bg) text-(--status-deleted-text)'
+                                    : 'bg-(--status-added-bg) text-(--status-added-text)'">
+                                {{ new Date(conflictModalSourceEntry.modifiedAt) > new Date(conflictModalTargetEntry.modifiedAt) ? t('servers.conflictNewer') : t('servers.conflictOlder') }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                <p class="mt-2 text-[11px] text-(--app-muted)">{{ t('servers.conflictDestination') }}: {{ conflictModalDestinationPath }}</p>
+
+                <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-(--app-muted)">{{ t('servers.conflictAction') }}</p>
+                <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl border border-(--app-border) bg-(--app-elevated) px-4 py-2.5 text-left text-sm transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                        @click="confirmConflictModal('overwrite')">
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 8h12M9 4l5 4-5 4"/></svg>
+                        <span><span class="font-semibold">{{ t('servers.conflictOverwrite') }}</span><br><span class="text-xs text-(--app-muted)">{{ t('servers.conflictOverwriteDesc') }}</span></span>
+                    </button>
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl border border-(--app-border) bg-(--app-elevated) px-4 py-2.5 text-left text-sm transition hover:border-(--app-accent) hover:text-(--app-accent)"
                         @click="confirmConflictModal('skip')">
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 8h10M11 5l3 3-3 3M2 5v6"/></svg>
+                        <span><span class="font-semibold">{{ t('servers.conflictSkip') }}</span><br><span class="text-xs text-(--app-muted)">{{ t('servers.conflictSkipDesc') }}</span></span>
+                    </button>
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl border border-(--app-border) bg-(--app-elevated) px-4 py-2.5 text-left text-sm transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                        @click="confirmConflictModal('overwrite-if-newer')">
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M8 5v4l2.5 1.5"/></svg>
+                        <span><span class="font-semibold">{{ t('servers.conflictOverwriteIfNewer') }}</span><br><span class="text-xs text-(--app-muted)">{{ t('servers.conflictOverwriteIfNewerDesc') }}</span></span>
+                    </button>
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl border border-(--app-border) bg-(--app-elevated) px-4 py-2.5 text-left text-sm transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                        @click="confirmConflictModal('rename-auto')">
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11.5 2.5a1.41 1.41 0 0 1 2 2L5 13H2v-3L11.5 2.5Z"/></svg>
+                        <span><span class="font-semibold">{{ t('servers.conflictRenameAuto') }}</span><br><span class="text-xs text-(--app-muted)">{{ t('servers.conflictRenameAutoDesc') }}</span></span>
+                    </button>
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl border border-(--app-border) bg-(--app-elevated) px-4 py-2.5 text-left text-sm transition hover:border-(--app-accent) hover:text-(--app-accent) sm:col-span-2"
+                        @click="confirmConflictModal('overwrite-if-size-different')">
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 8h12M4 4l-2 4 2 4M12 4l2 4-2 4"/></svg>
+                        <span><span class="font-semibold">{{ t('servers.conflictOverwriteIfSizeDifferent') }}</span><br><span class="text-xs text-(--app-muted)">{{ t('servers.conflictOverwriteIfSizeDifferentDesc') }}</span></span>
+                    </button>
+                </div>
+
+                <label class="mt-4 flex cursor-pointer items-center gap-2.5 rounded-xl border border-(--app-border) bg-(--app-elevated) px-3 py-2.5 text-sm text-(--app-text)">
+                    <input v-model="conflictModalApplyToAll" type="checkbox"
+                        class="h-4 w-4 rounded border border-(--app-border) bg-(--app-input) accent-(--app-accent)" />
+                    <span class="font-medium">{{ t('servers.conflictApplyToAll') }}</span>
+                    <span class="ml-auto text-xs text-(--app-muted)">{{ t('servers.conflictApplyToAllDesc') }}</span>
+                </label>
+
+                <div class="mt-4 flex justify-end">
+                    <button type="button"
+                        class="inline-flex items-center gap-2 rounded-lg border border-(--app-border) bg-(--app-elevated) px-4 py-2 text-sm font-semibold transition hover:bg-(--app-muted-surface)"
+                        @click="confirmConflictModal('skip')">
+                        <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg>
                         {{ t('common.cancel') }}
                     </button>
                 </div>
@@ -630,7 +864,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { listServers, localFilesService, remoteFilesService, type GetAllServersResponseDto } from '../services/api';
+import { listServers, localFilesService, remoteFilesService, listVersions, createVersion, rollbackVersion, deleteVersion, type GetAllServersResponseDto, type VersionDto } from '../services/api';
 
 type ExplorerEntry = {
     name: string;
@@ -742,6 +976,133 @@ const transferQueue = ref<TransferQueueItem[]>([]);
 const transferLog = ref<TransferLogEntry[]>([]);
 const conflictRule = ref<ConflictRule>('ask');
 const conflictModalVisible = ref(false);
+
+// Delete confirmation modal
+const deleteModalVisible = ref(false);
+const deleteModalEntry = ref<ExplorerEntry | null>(null);
+const deleteModalIsRemote = ref(false);
+const deleteModalPhase = ref<1 | 2>(1);
+const deleteModalResolver = ref<((ok: boolean) => void) | null>(null);
+
+function showDeleteModal(entry: ExplorerEntry, isRemote: boolean): Promise<boolean> {
+    deleteModalEntry.value = entry;
+    deleteModalIsRemote.value = isRemote;
+    deleteModalPhase.value = 1;
+    deleteModalVisible.value = true;
+    return new Promise<boolean>((resolve) => {
+        deleteModalResolver.value = resolve;
+    });
+}
+
+function deleteModalAdvance(): void {
+    if (deleteModalEntry.value?.isDirectory && deleteModalPhase.value === 1) {
+        deleteModalPhase.value = 2;
+    } else {
+        deleteModalConfirm();
+    }
+}
+
+function deleteModalConfirm(): void {
+    const r = deleteModalResolver.value;
+    deleteModalVisible.value = false;
+    deleteModalResolver.value = null;
+    r?.(true);
+}
+
+function deleteModalCancel(): void {
+    const r = deleteModalResolver.value;
+    deleteModalVisible.value = false;
+    deleteModalPhase.value = 1;
+    deleteModalResolver.value = null;
+    r?.(false);
+}
+
+// Version state
+const versionUploadModalVisible = ref(false);
+const versionUploadLabel = ref('');
+const versionUploading = ref(false);
+const versionUploadError = ref('');
+const versionsHistoryModalVisible = ref(false);
+const versionsHistoryList = ref<VersionDto[]>([]);
+const versionsHistoryLoading = ref(false);
+const versionsRollingBack = ref<Record<number, boolean>>({});
+const versionsDeleting = ref<Record<number, boolean>>({});
+const versionsRollbackError = ref('');
+
+function openVersionUploadModal(): void {
+    versionUploadLabel.value = '';
+    versionUploadError.value = '';
+    versionUploadModalVisible.value = true;
+}
+
+async function submitVersionUpload(): Promise<void> {
+    if (!selectedServerId.value) return;
+    const files = selectedLocalEntries.value.filter(e => !e.isDirectory);
+    if (files.length === 0) return;
+    versionUploading.value = true;
+    versionUploadError.value = '';
+    try {
+        const filesToBackup: string[] = [];
+        const filesToUpload: Array<{ remotePath: string; contentBase64: string }> = [];
+        for (const file of files) {
+            const remoteDestPath = joinRemotePath(remotePath.value || '/', file.name);
+            filesToBackup.push(remoteDestPath);
+            const contentBase64 = await localFilesService.readFile(file.path);
+            filesToUpload.push({ remotePath: remoteDestPath, contentBase64 });
+        }
+        const label = versionUploadLabel.value.trim() || undefined;
+        await createVersion({
+            serverId: selectedServerId.value,
+            baseRemotePath: remotePath.value || '/',
+            label,
+            filesToBackup,
+            filesToUpload,
+        });
+        versionUploadModalVisible.value = false;
+        pushTransferLog(t('servers.versionCreated', { label: label ?? '' }), 'success');
+        await loadRemoteFiles();
+    } catch (err: any) {
+        versionUploadError.value = err?.message ?? String(err);
+    } finally {
+        versionUploading.value = false;
+    }
+}
+
+async function openVersionsHistory(): Promise<void> {
+    if (!selectedServerId.value) return;
+    versionsRollbackError.value = '';
+    versionsHistoryLoading.value = true;
+    versionsHistoryModalVisible.value = true;
+    try {
+        versionsHistoryList.value = await listVersions(selectedServerId.value, remotePath.value || '/');
+    } finally {
+        versionsHistoryLoading.value = false;
+    }
+}
+
+async function doRollbackVersion(version: VersionDto): Promise<void> {
+    versionsRollingBack.value = { ...versionsRollingBack.value, [version.id]: true };
+    versionsRollbackError.value = '';
+    try {
+        await rollbackVersion(version.id);
+        pushTransferLog(t('servers.versionRolledBack', { label: version.label ?? version.createdAt }), 'success');
+        await loadRemoteFiles();
+    } catch (err: any) {
+        versionsRollbackError.value = err?.message ?? String(err);
+    } finally {
+        versionsRollingBack.value = { ...versionsRollingBack.value, [version.id]: false };
+    }
+}
+
+async function doDeleteVersion(version: VersionDto): Promise<void> {
+    versionsDeleting.value = { ...versionsDeleting.value, [version.id]: true };
+    try {
+        await deleteVersion(version.id);
+        versionsHistoryList.value = versionsHistoryList.value.filter(v => v.id !== version.id);
+    } finally {
+        versionsDeleting.value = { ...versionsDeleting.value, [version.id]: false };
+    }
+}
 
 // Sort + filter state
 type SortKey = 'name' | 'size' | 'date';
@@ -2896,12 +3257,8 @@ function renameLocalEntry(entry: ExplorerEntry): void {
 }
 
 async function deleteLocalEntry(entry: ExplorerEntry): Promise<void> {
-    const accepted = window.confirm(t('servers.deleteConfirm'));
-
-    if (!accepted) {
-        return;
-    }
-
+    const accepted = await showDeleteModal(entry, false);
+    if (!accepted) return;
     try {
         await localFilesService.deletePath(entry.path);
         await loadLocalFiles();
@@ -2986,15 +3343,9 @@ function renameRemoteEntry(entry: ExplorerEntry): void {
 }
 
 async function deleteRemoteEntry(entry: ExplorerEntry): Promise<void> {
-    if (!selectedServerId.value) {
-        return;
-    }
-
-    const accepted = window.confirm(t('servers.deleteConfirm'));
-
-    if (!accepted) {
-        return;
-    }
+    if (!selectedServerId.value) return;
+    const accepted = await showDeleteModal(entry, true);
+    if (!accepted) return;
 
     try {
         await remoteFilesService.deleteRemoteFile(

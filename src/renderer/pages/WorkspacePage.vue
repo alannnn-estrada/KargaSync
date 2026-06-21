@@ -671,7 +671,7 @@ async function saveEditModal() {
 }
 
 async function handleDeleteEnvironment(env: any) {
-    const ok = await (window as any).api.showConfirm(t('project.deleteConfirm', { name: env.name }));
+    const ok = await (window as any).api.showConfirm(t('project.deleteEnvConfirm', { name: env.name }));
     if (!ok) return;
 
     try {

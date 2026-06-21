@@ -36,6 +36,10 @@ export const IPC_CHANNELS = {
     environmentsDelete: 'environments:delete',
     environmentBindingsAssign: 'environmentBindings:assign',
     environmentBindingsList: 'environmentBindings:list',
+    versionsList: 'versions:list',
+    versionsCreate: 'versions:create',
+    versionsRollback: 'versions:rollback',
+    versionsDelete: 'versions:delete',
 } as const;
 
 export const LOCAL_FILE_CHANNELS = {
@@ -81,6 +85,28 @@ export type GetEnvironmentsResponseDto = import('../dto').GetEnvironmentsRespons
 
 export type EnvironmentBindingDto = import('../dto').EnvironmentBindingDTO;
 export type GetEnvironmentBindingsResponseDto = import('../dto').GetEnvironmentBindingsResponseDTO;
+
+export interface VersionDto {
+    id: number;
+    serverId: number;
+    remotePath: string;
+    label: string | null;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    storagePath: string;
+    fileCount: number;
+    bytesStored: number;
+    errorMessage: string | null;
+    createdAt: string;
+    finishedAt: string | null;
+}
+
+export interface CreateVersionInput {
+    serverId: number;
+    baseRemotePath: string;
+    label?: string;
+    filesToBackup: string[];
+    filesToUpload: Array<{ remotePath: string; contentBase64: string }>;
+}
 
 export interface AppMenuAnchorDto {
     x: number;
@@ -153,4 +179,9 @@ export interface RendererApi {
     createRemoteFile: (serverId: number, remotePath: string, credentialOverride?: string | RemoteFileCredentialOverrideDto) => Promise<void>;
     renameRemotePath: (serverId: number, sourcePath: string, targetPath: string, credentialOverride?: string | RemoteFileCredentialOverrideDto) => Promise<void>;
     openRemoteFileExternal: (localPath: string) => Promise<void>;
+    // Versions
+    listVersions: (serverId: number, baseRemotePath: string) => Promise<VersionDto[]>;
+    createVersion: (input: CreateVersionInput) => Promise<VersionDto>;
+    rollbackVersion: (versionId: number) => Promise<void>;
+    deleteVersion: (versionId: number) => Promise<boolean>;
 }
