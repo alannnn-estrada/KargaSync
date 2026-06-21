@@ -11,7 +11,7 @@
         <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
             <article
                 class="relative rounded-2xl border border-(--app-border) bg-(--app-elevated) p-4 shadow-(--app-shadow-sm)"
-                :class="activeExplorerPane === 'local' ? 'ring-2 ring-(--app-accent) ring-offset-2 ring-offset-transparent' : ''"
+                :class="activeExplorerPane === 'local' ? 'ring-1 ring-(--app-accent)/60' : 'ring-1 ring-transparent'"
                 @click="setActiveExplorerPane('local')" @contextmenu.prevent="openContextMenu($event, 'local')">
                 <p class="text-xs font-medium uppercase tracking-[0.14em] text-(--app-muted)">{{
                     t('servers.localFiles') }}</p>
@@ -137,30 +137,40 @@
                 <p v-else-if="localErrorMessage" class="mt-3 text-sm text-(--status-deleted-text)">{{ localErrorMessage
                 }}</p>
 
-                <ul v-if="displayedLocalEntries.length > 0 || canGoLocalParent" class="mt-2 max-h-[min(40vh,480px)] space-y-0.5 overflow-y-auto rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-1.5">
-                    <li v-if="canGoLocalParent"
-                        class="flex items-center gap-3 rounded-lg px-2 py-2 cursor-pointer transition-colors hover:bg-(--app-muted-surface)"
-                        @click="goLocalParent">
-                        <span class="shrink-0 text-base leading-none">📁</span>
-                        <span class="min-w-0 flex-1 truncate text-sm font-medium text-(--app-muted)">..</span>
-                        <span class="shrink-0 text-xs text-(--app-muted) italic">{{ t('servers.back') }}</span>
-                    </li>
-                    <li v-for="entry in displayedLocalEntries" :key="entry.path"
-                        class="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors"
-                        :class="[
-                            isLocalEntrySelected(entry.path)
-                                ? 'bg-(--app-accent)/10 ring-1 ring-(--app-accent)/30'
-                                : 'hover:bg-(--app-muted-surface)',
-                            entry.isDirectory ? 'cursor-pointer' : 'cursor-grab'
-                        ]"
-                        :draggable="!entry.isDirectory" @click="handleLocalEntryClick(entry, $event)"
-                        @dblclick="handleLocalEntryDoubleClick(entry)" @dragstart="handleLocalDragStart(entry, $event)"
-                        @dragend="handleLocalDragEnd" @contextmenu.prevent.stop="handleLocalContextMenu($event, entry)">
-                        <span class="shrink-0 text-base leading-none">{{ entry.isDirectory ? '📁' : '📄' }}</span>
-                        <span class="min-w-0 flex-1 truncate text-sm" :class="isLocalEntrySelected(entry.path) ? 'font-medium text-(--app-text)' : 'text-(--app-text)'">{{ entry.name }}</span>
-                        <span class="shrink-0 text-xs text-(--app-muted)">{{ formatEntryMeta(entry) }}</span>
-                    </li>
-                </ul>
+                <div v-if="displayedLocalEntries.length > 0 || canGoLocalParent" class="mt-2 overflow-hidden rounded-xl border border-(--app-border)">
+                    <div class="grid items-center gap-2 border-b border-(--app-border) bg-(--app-muted-surface) px-2 py-1.5" style="grid-template-columns:1.25rem 1fr 5.5rem">
+                        <span />
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-(--app-muted)">{{ t('project.nameLabel') }}</span>
+                        <span class="text-right text-[10px] font-semibold uppercase tracking-wider text-(--app-muted)">{{ t('servers.columnSize') }}</span>
+                    </div>
+                    <ul class="max-h-[min(40vh,480px)] space-y-px overflow-y-auto bg-(--app-surface) p-1">
+                        <li v-if="canGoLocalParent"
+                            class="grid cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-(--app-muted-surface)"
+                            style="grid-template-columns:1.25rem 1fr 5.5rem"
+                            @click="goLocalParent">
+                            <svg class="h-4 w-4 text-amber-400" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 4C1.5 3.17 2.17 2.5 3 2.5h3.086a1 1 0 0 1 .707.293L8.207 4.207A1 1 0 0 0 8.914 4.5H13c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5H3c-.83 0-1.5-.67-1.5-1.5V4Z"/></svg>
+                            <span class="min-w-0 truncate text-sm text-(--app-muted)">..</span>
+                            <span class="text-right text-xs text-(--app-muted) italic">{{ t('servers.back') }}</span>
+                        </li>
+                        <li v-for="entry in displayedLocalEntries" :key="entry.path"
+                            class="grid items-center gap-2 rounded-md px-2 py-1.5 transition-colors"
+                            style="grid-template-columns:1.25rem 1fr 5.5rem"
+                            :class="[
+                                isLocalEntrySelected(entry.path)
+                                    ? 'bg-(--app-accent)/10 ring-1 ring-(--app-accent)/25'
+                                    : 'hover:bg-(--app-muted-surface)',
+                                entry.isDirectory ? 'cursor-pointer' : 'cursor-grab'
+                            ]"
+                            :draggable="!entry.isDirectory" @click="handleLocalEntryClick(entry, $event)"
+                            @dblclick="handleLocalEntryDoubleClick(entry)" @dragstart="handleLocalDragStart(entry, $event)"
+                            @dragend="handleLocalDragEnd" @contextmenu.prevent.stop="handleLocalContextMenu($event, entry)">
+                            <svg v-if="entry.isDirectory" class="h-4 w-4 text-amber-400" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 4C1.5 3.17 2.17 2.5 3 2.5h3.086a1 1 0 0 1 .707.293L8.207 4.207A1 1 0 0 0 8.914 4.5H13c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5H3c-.83 0-1.5-.67-1.5-1.5V4Z"/></svg>
+                            <svg v-else class="h-4 w-4 shrink-0" :class="getFileIconColor(entry.name)" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 1.5h6l3 3v9.5a.5.5 0 0 1-.5.5h-8.5a.5.5 0 0 1-.5-.5V2a.5.5 0 0 1 .5-.5Z"/><path d="M9.5 1.5v3.5h3"/></svg>
+                            <span class="min-w-0 truncate text-sm" :class="isLocalEntrySelected(entry.path) ? 'font-medium text-(--app-text)' : 'text-(--app-text)'">{{ entry.name }}</span>
+                            <span class="text-right font-mono text-xs text-(--app-muted)">{{ formatEntrySize(entry) }}</span>
+                        </li>
+                    </ul>
+                </div>
                 <p v-else-if="localFilter && localEntries.length > 0" class="mt-2 rounded-lg border border-dashed border-(--app-border) px-3 py-3 text-xs text-(--app-muted)">
                     {{ t('servers.noMatchingFiles') }}
                 </p>
@@ -229,7 +239,7 @@
 
             <article
                 class="relative rounded-2xl border border-(--app-border) bg-(--app-elevated) p-4 shadow-(--app-shadow-sm)"
-                :class="(activeExplorerPane === 'remote' || isRemoteDropActive) ? 'ring-2 ring-(--app-accent) ring-offset-2 ring-offset-transparent' : ''"
+                :class="(activeExplorerPane === 'remote' || isRemoteDropActive) ? 'ring-1 ring-(--app-accent)/60' : 'ring-1 ring-transparent'"
                 @click="setActiveExplorerPane('remote')" @contextmenu.prevent="openContextMenu($event, 'remote')"
                 @dragover.prevent="handleRemoteDragOver" @dragleave="handleRemoteDragLeave"
                 @drop.prevent="handleRemoteDrop">
@@ -422,29 +432,39 @@
                 <p v-if="isRemoteLoading" class="mt-2 text-sm text-(--app-muted)">{{ t('servers.loadingRemote') }}</p>
                 <p v-else-if="remoteErrorMessage" class="mt-2 text-sm text-(--status-deleted-text)">{{ remoteErrorMessage }}</p>
 
-                <ul v-if="displayedRemoteEntries.length > 0 || canGoRemoteParent" class="mt-2 max-h-[min(40vh,480px)] space-y-0.5 overflow-y-auto rounded-xl border border-(--app-border) bg-(--app-muted-surface) p-1.5">
-                    <li v-if="canGoRemoteParent"
-                        class="flex items-center gap-3 rounded-lg px-2 py-2 cursor-pointer transition-colors hover:bg-(--app-muted-surface)"
-                        @click="goRemoteParent">
-                        <span class="shrink-0 text-base leading-none">📁</span>
-                        <span class="min-w-0 flex-1 truncate text-sm font-medium text-(--app-muted)">..</span>
-                        <span class="shrink-0 text-xs text-(--app-muted) italic">{{ t('servers.back') }}</span>
-                    </li>
-                    <li v-for="entry in displayedRemoteEntries" :key="entry.path"
-                        class="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors"
-                        :class="[
-                            isRemoteEntrySelected(entry.path)
-                                ? 'bg-(--app-accent)/10 ring-1 ring-(--app-accent)/30'
-                                : 'hover:bg-(--app-muted-surface)',
-                            entry.isDirectory ? 'cursor-pointer' : 'cursor-default'
-                        ]"
-                        @click="handleRemoteEntryClick(entry, $event)" @dblclick="handleRemoteEntryDoubleClick(entry)"
-                        @contextmenu.prevent.stop="handleRemoteContextMenu($event, entry)">
-                        <span class="shrink-0 text-base leading-none">{{ entry.isDirectory ? '📁' : '📄' }}</span>
-                        <span class="min-w-0 flex-1 truncate text-sm" :class="isRemoteEntrySelected(entry.path) ? 'font-medium text-(--app-text)' : 'text-(--app-text)'">{{ entry.name }}</span>
-                        <span class="shrink-0 text-xs text-(--app-muted)">{{ formatEntryMeta(entry) }}</span>
-                    </li>
-                </ul>
+                <div v-if="displayedRemoteEntries.length > 0 || canGoRemoteParent" class="mt-2 overflow-hidden rounded-xl border border-(--app-border)">
+                    <div class="grid items-center gap-2 border-b border-(--app-border) bg-(--app-muted-surface) px-2 py-1.5" style="grid-template-columns:1.25rem 1fr 5.5rem">
+                        <span />
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-(--app-muted)">{{ t('project.nameLabel') }}</span>
+                        <span class="text-right text-[10px] font-semibold uppercase tracking-wider text-(--app-muted)">{{ t('servers.columnSize') }}</span>
+                    </div>
+                    <ul class="max-h-[min(40vh,480px)] space-y-px overflow-y-auto bg-(--app-surface) p-1">
+                        <li v-if="canGoRemoteParent"
+                            class="grid cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-(--app-muted-surface)"
+                            style="grid-template-columns:1.25rem 1fr 5.5rem"
+                            @click="goRemoteParent">
+                            <svg class="h-4 w-4 text-amber-400" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 4C1.5 3.17 2.17 2.5 3 2.5h3.086a1 1 0 0 1 .707.293L8.207 4.207A1 1 0 0 0 8.914 4.5H13c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5H3c-.83 0-1.5-.67-1.5-1.5V4Z"/></svg>
+                            <span class="min-w-0 truncate text-sm text-(--app-muted)">..</span>
+                            <span class="text-right text-xs text-(--app-muted) italic">{{ t('servers.back') }}</span>
+                        </li>
+                        <li v-for="entry in displayedRemoteEntries" :key="entry.path"
+                            class="grid items-center gap-2 rounded-md px-2 py-1.5 transition-colors"
+                            style="grid-template-columns:1.25rem 1fr 5.5rem"
+                            :class="[
+                                isRemoteEntrySelected(entry.path)
+                                    ? 'bg-(--app-accent)/10 ring-1 ring-(--app-accent)/25'
+                                    : 'hover:bg-(--app-muted-surface)',
+                                entry.isDirectory ? 'cursor-pointer' : 'cursor-default'
+                            ]"
+                            @click="handleRemoteEntryClick(entry, $event)" @dblclick="handleRemoteEntryDoubleClick(entry)"
+                            @contextmenu.prevent.stop="handleRemoteContextMenu($event, entry)">
+                            <svg v-if="entry.isDirectory" class="h-4 w-4 text-amber-400" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 4C1.5 3.17 2.17 2.5 3 2.5h3.086a1 1 0 0 1 .707.293L8.207 4.207A1 1 0 0 0 8.914 4.5H13c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5H3c-.83 0-1.5-.67-1.5-1.5V4Z"/></svg>
+                            <svg v-else class="h-4 w-4 shrink-0" :class="getFileIconColor(entry.name)" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 1.5h6l3 3v9.5a.5.5 0 0 1-.5.5h-8.5a.5.5 0 0 1-.5-.5V2a.5.5 0 0 1 .5-.5Z"/><path d="M9.5 1.5v3.5h3"/></svg>
+                            <span class="min-w-0 truncate text-sm" :class="isRemoteEntrySelected(entry.path) ? 'font-medium text-(--app-text)' : 'text-(--app-text)'">{{ entry.name }}</span>
+                            <span class="text-right font-mono text-xs text-(--app-muted)">{{ formatEntrySize(entry) }}</span>
+                        </li>
+                    </ul>
+                </div>
                 <p v-else-if="remoteFilter && remoteEntries.length > 0" class="mt-2 rounded-lg border border-dashed border-(--app-border) px-3 py-3 text-xs text-(--app-muted)">
                     {{ t('servers.noMatchingFiles') }}
                 </p>
@@ -2571,6 +2591,26 @@ function formatEntryMeta(entry: ExplorerEntry): string {
     const date = formatRelativeDate(entry.modifiedAt);
     if (size && date) return `${size} · ${date}`;
     return size || date;
+}
+
+function formatEntrySize(entry: ExplorerEntry): string {
+    if (entry.isDirectory) return '';
+    if (typeof entry.size !== 'number' || !Number.isFinite(entry.size)) return '';
+    return formatFileSize(entry.size);
+}
+
+function getFileIconColor(name: string): string {
+    const ext = (name.split('.').pop() ?? '').toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'bmp', 'avif'].includes(ext)) return 'text-green-400';
+    if (['php'].includes(ext)) return 'text-purple-400';
+    if (['js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'vue'].includes(ext)) return 'text-yellow-300';
+    if (['css', 'scss', 'less', 'sass'].includes(ext)) return 'text-cyan-400';
+    if (['html', 'htm'].includes(ext)) return 'text-orange-400';
+    if (['json', 'yaml', 'yml', 'toml', 'xml'].includes(ext)) return 'text-amber-300';
+    if (['zip', 'tar', 'gz', 'rar', '7z', 'bz2'].includes(ext)) return 'text-amber-500';
+    if (['pdf'].includes(ext)) return 'text-red-400';
+    if (['sh', 'bash', 'zsh', 'bat', 'cmd'].includes(ext)) return 'text-green-300';
+    return 'text-(--app-muted)';
 }
 
 function normalizeTrailingSeparators(value: string): string {

@@ -1,79 +1,79 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
-/* Reduce border-radius scale — tool-like geometry over consumer roundness */
+/* Tool-like geometry — slightly more rounded than before but still professional */
 @theme {
-  --radius-sm:  0.1875rem;   /* 3px  */
-  --radius:     0.25rem;     /* 4px  */
-  --radius-md:  0.3125rem;   /* 5px  */
-  --radius-lg:  0.4375rem;   /* 7px  */
-  --radius-xl:  0.5rem;      /* 8px  */
-  --radius-2xl: 0.625rem;    /* 10px */
-  --radius-3xl: 0.75rem;     /* 12px */
+  --radius-sm:  0.25rem;   /* 4px  */
+  --radius:     0.375rem;  /* 6px  */
+  --radius-md:  0.5rem;    /* 8px  */
+  --radius-lg:  0.625rem;  /* 10px */
+  --radius-xl:  0.75rem;   /* 12px */
+  --radius-2xl: 1rem;      /* 16px */
+  --radius-3xl: 1.25rem;   /* 20px */
   --radius-full: 9999px;
 }
 
-/* ── Light mode ─────────────────────────────────────────── */
+/* ── Light mode — GitHub Light ───────────────────────────── */
 :root {
-  --app-bg:            #e8edf5;
-  --app-surface:       #f2f5fa;
+  --app-bg:            #f6f8fa;
+  --app-surface:       #ffffff;
   --app-elevated:      #ffffff;
-  --app-sidebar:       #dce3ef;
-  --app-panel:         #e8edf5;
+  --app-sidebar:       #f6f8fa;
+  --app-panel:         #f6f8fa;
   --app-input:         #ffffff;
-  --app-muted-surface: #dae0eb;
-  --app-border:        #b2bece;
-  --app-border-subtle: #c8d1de;
-  --app-text:          #18273a;
-  --app-muted:         #4e6073;
-  --app-accent:        #0284c7;
-  --app-shadow:        0 1px 4px rgba(0,0,0,.10), 0 4px 16px rgba(0,0,0,.07);
-  --app-shadow-sm:     0 1px 2px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.05);
+  --app-muted-surface: #f6f8fa;
+  --app-border:        #d0d7de;
+  --app-border-subtle: #e1e4e8;
+  --app-text:          #1f2328;
+  --app-muted:         #656d76;
+  --app-accent:        #0969da;
+  --app-shadow:        0 1px 4px rgba(31,35,40,.12), 0 4px 16px rgba(31,35,40,.08);
+  --app-shadow-sm:     0 1px 2px rgba(31,35,40,.08), 0 2px 8px rgba(31,35,40,.05);
 
-  --status-added-bg:       #ecfdf5;
-  --status-added-soft:     rgba(209,250,229,.55);
-  --status-added-border:   #6ee7b7;
-  --status-added-text:     #065f46;
-  --status-modified-bg:    #fefce8;
-  --status-modified-soft:  rgba(254,249,195,.55);
-  --status-modified-border:#fcd34d;
-  --status-modified-text:  #78350f;
-  --status-deleted-bg:     #fff1f2;
-  --status-deleted-soft:   rgba(255,228,230,.55);
-  --status-deleted-border: #fca5a5;
-  --status-deleted-text:   #991b1b;
+  --status-added-bg:       #dafbe1;
+  --status-added-soft:     rgba(31,136,61,.08);
+  --status-added-border:   #82e59a;
+  --status-added-text:     #1a7f37;
+  --status-modified-bg:    #fff8c5;
+  --status-modified-soft:  rgba(154,103,0,.08);
+  --status-modified-border:#d4a72c;
+  --status-modified-text:  #7d4e00;
+  --status-deleted-bg:     #ffebe9;
+  --status-deleted-soft:   rgba(209,36,31,.08);
+  --status-deleted-border: #ff8182;
+  --status-deleted-text:   #d1242f;
 }
 
-/* ── Dark mode ──────────────────────────────────────────── */
+/* ── Dark mode — GitHub Dark ─────────────────────────────── */
 html.dark {
   color-scheme: dark;
-  --app-bg:            #07101d;
-  --app-surface:       #0b1622;
-  --app-elevated:      #101e2f;
-  --app-sidebar:       #050e1a;
-  --app-panel:         #07101d;
-  --app-input:         #0b1622;
-  --app-muted-surface: rgba(255,255,255,.04);
-  --app-border:        #1c2d40;
-  --app-border-subtle: rgba(255,255,255,.06);
-  --app-text:          #b8cce0;
-  --app-muted:         #526b82;
-  --app-accent:        #0ea5e9;
+  --app-bg:            #0d1117;
+  --app-surface:       #161b22;
+  --app-elevated:      #21262d;
+  --app-sidebar:       #161b22;
+  --app-panel:         #0d1117;
+  --app-input:         #161b22;
+  --app-muted-surface: rgba(255,255,255,.05);
+  --app-border:        #30363d;
+  --app-border-subtle: rgba(255,255,255,.08);
+  --app-text:          #e6edf3;
+  --app-muted:         #8b949e;
+  --app-accent:        #2f81f7;
   --app-shadow:        0 1px 4px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.45);
-  --app-shadow-sm:     0 1px 2px rgba(0,0,0,.50), 0 2px 8px rgba(0,0,0,.38);
+  --app-shadow-sm:     0 1px 2px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.30);
 
-  --status-added-bg:       rgba(6,78,59,.22);
-  --status-added-soft:     rgba(6,78,59,.15);
-  --status-added-border:   rgba(52,211,153,.28);
-  --status-added-text:     #6ee7b7;
-  --status-modified-bg:    rgba(120,53,15,.22);
-  --status-modified-soft:  rgba(120,53,15,.15);
-  --status-modified-border:rgba(252,211,77,.28);
-  --status-modified-text:  #fcd34d;
-  --status-deleted-bg:     rgba(153,27,27,.22);
-  --status-deleted-soft:   rgba(153,27,27,.15);
-  --status-deleted-border: rgba(252,165,165,.28);
-  --status-deleted-text:   #fca5a5;
+  --status-added-bg:       rgba(35,134,54,.15);
+  --status-added-soft:     rgba(35,134,54,.08);
+  --status-added-border:   rgba(63,185,80,.35);
+  --status-added-text:     #3fb950;
+  --status-modified-bg:    rgba(210,153,34,.15);
+  --status-modified-soft:  rgba(210,153,34,.08);
+  --status-modified-border:rgba(210,153,34,.35);
+  --status-modified-text:  #d29922;
+  --status-deleted-bg:     rgba(218,54,51,.15);
+  --status-deleted-soft:   rgba(218,54,51,.08);
+  --status-deleted-border: rgba(248,81,73,.35);
+  --status-deleted-text:   #f85149;
 }
 
 /* ── Base ───────────────────────────────────────────────── */
@@ -84,7 +84,7 @@ body {
   min-height: 100vh;
   background: var(--app-bg);
   color: var(--app-text);
-  font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   overflow-x: hidden;
 }
 

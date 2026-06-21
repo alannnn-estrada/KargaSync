@@ -60,11 +60,11 @@
                     <RouterLink v-for="item in navigation" :key="item.to" :to="item.to"
                         :title="isSidebarCollapsed ? item.label : ''"
                         :aria-label="item.label"
-                        class="flex w-full items-center rounded-lg text-xs font-medium transition"
+                        class="flex w-full items-center rounded-md text-xs font-medium transition"
                         :class="[
                             isSidebarCollapsed ? 'justify-center p-2' : 'gap-2.5 px-2.5 py-2',
                             route.path === item.to
-                                ? 'bg-(--app-elevated) text-(--app-text) shadow-(--app-shadow-sm) ring-1 ring-(--app-border)'
+                                ? 'bg-(--app-elevated) text-(--app-text)'
                                 : 'text-(--app-muted) hover:bg-(--app-elevated) hover:text-(--app-text)',
                         ]">
                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded"
@@ -98,11 +98,11 @@
                     <button type="button"
                         :title="isSidebarCollapsed ? t('changelog.menuLabel') : ''"
                         :aria-label="t('changelog.menuLabel')"
-                        class="relative flex w-full items-center rounded-lg text-xs font-medium transition"
+                        class="relative flex w-full items-center rounded-md text-xs font-medium transition"
                         :class="[
                             isSidebarCollapsed ? 'justify-center p-2' : 'gap-2.5 px-2.5 py-2',
                             changelogStore.isModalOpen
-                                ? 'bg-(--app-elevated) text-(--app-text) shadow-(--app-shadow-sm) ring-1 ring-(--app-border)'
+                                ? 'bg-(--app-elevated) text-(--app-text)'
                                 : 'text-(--app-muted) hover:bg-(--app-elevated) hover:text-(--app-text)',
                         ]"
                         @click="openChangelog">

@@ -258,7 +258,8 @@
         "versionStatus": "Estado: {status}",
         "versionDate": "Creado: {date}",
         "chooseKeyFile": "Elegir archivo de llave…",
-        "keyFileLoaded": "Archivo de llave cargado"
+        "keyFileLoaded": "Archivo de llave cargado",
+        "columnSize": "Tamaño"
     },
     "comparison": {
         "section": "Comparación de entornos",

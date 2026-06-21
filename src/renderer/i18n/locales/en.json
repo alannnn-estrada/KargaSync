@@ -258,7 +258,8 @@
         "versionStatus": "Status: {status}",
         "versionDate": "Created: {date}",
         "chooseKeyFile": "Choose key file…",
-        "keyFileLoaded": "Key file loaded"
+        "keyFileLoaded": "Key file loaded",
+        "columnSize": "Size"
     },
     "comparison": {
         "section": "Environment comparison",
