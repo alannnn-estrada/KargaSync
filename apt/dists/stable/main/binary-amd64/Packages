@@ -7,10 +7,10 @@ Depends: libgtk-3-0, libnotify4, libnss3, xdg-utils, libatspi2.0-0, libdrm2, lib
 Recommends: pulseaudio | libasound2
 Suggests: gir1.2-gnomekeyring-1.0, libgnome-keyring0, lsb-release
 Filename: pool/main/karga-sync_0.3.0_amd64.deb
-Size: 90019628
-MD5sum: ede9f9e9b3f57f027cf4f161cc2eac9e
-SHA1: 2d49d45e8e301dfcd4c6318158cb1b9b3d8824ba
-SHA256: c3408ddfddfc01f834ffd696ceecc02cf6b53c1e388a3a12ab8d2882cbb62b5c
+Size: 90020124
+MD5sum: 00a6f844bc2f24b818de2d88cad7e8be
+SHA1: 72a42faf9248eec3a798425744920f9c56bc26a7
+SHA256: 12b05b451cd91d1a01202909d7e95388099fcc76c17197d2e52b545f2384bf21
 Section: utils
 Priority: optional
 Description: Compare file environments between local folders and remote servers via SFTP/FTP.
