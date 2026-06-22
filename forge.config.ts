@@ -12,13 +12,14 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: 'src/assets/icons/icon',
+    executableName: 'karga-sync',
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({ setupIcon: 'src/assets/icons/icon.ico' }),
     new MakerZIP({}, ['darwin']),
-    new MakerRpm({ options: { icon: 'src/assets/icons/512x512.png' } }),
-    new MakerDeb({ options: { icon: 'src/assets/icons/512x512.png' } }),
+    new MakerRpm({ options: { icon: 'src/assets/icons/512x512.png', bin: 'karga-sync' } }),
+    new MakerDeb({ options: { icon: 'src/assets/icons/512x512.png', bin: 'karga-sync' } }),
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
