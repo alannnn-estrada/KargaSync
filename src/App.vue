@@ -202,6 +202,7 @@
 
         <ChangelogModal />
         <KeyboardShortcutsModal :visible="shortcutsOpen" @close="shortcutsOpen = false" />
+        <UpdateBanner />
     </div>
 </template>
 
@@ -210,7 +211,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import logoImage from './assets/logo.png';
-import { ChangelogModal, KeyboardShortcutsModal } from './renderer/components';
+import { ChangelogModal, KeyboardShortcutsModal, UpdateBanner } from './renderer/components';
 import { useChangelogStore } from './renderer/stores/changelog-store';
 import { useProjectComparisonStore, useSidebarStore, useSettingsStore } from './renderer/stores';
 import { listEnvironments } from './renderer/services/api';
@@ -430,6 +431,9 @@ onMounted(() => {
     loadSidebarState();
     void changelogStore.initialize();
     sidebar.load();
+    for (const projectId of sidebar.expandedProjectIds) {
+        void loadEnvsFor(projectId);
+    }
     if (sidebar.lastView) {
         void router.replace(sidebar.lastView);
     }

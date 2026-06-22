@@ -27,7 +27,10 @@
         "customEditorPath": "Ruta del editor personalizado",
         "customEditorPathPlaceholder": "ej. C:\\Archivos de programa\\MiEditor\\editor.exe",
         "customEditorPathHint": "Ruta completa al ejecutable. El archivo se pasa como primer argumento.",
-        "autoSave": "Los cambios se guardan automáticamente en SQLite."
+        "autoSave": "Los cambios se guardan automáticamente en SQLite.",
+        "scanConcurrency": "Concurrencia de escaneo",
+        "scanConcurrencyHint": "Conexiones paralelas al escanear archivos remotos. 0 = automático (la mitad de los núcleos CPU).",
+        "scanConcurrencyAuto": "Automático"
     },
     "changelog": {
         "title": "Registro de cambios",
@@ -162,6 +165,10 @@
         "renamePrompt": "Nuevo nombre",
         "openRemoteFileConfirm": "¿Quieres descargar y abrir este archivo con la app predeterminada?",
         "redownloadConfirm": "\"{name}\" ya está abierto para edición. ¿Volver a descargar del servidor? Se perderán los cambios locales.",
+        "editFileAlreadyOpen": "Archivo ya abierto para edición",
+        "editFileAlreadyOpenDesc": "¿Qué deseas hacer con este archivo?",
+        "editFileOpenExisting": "Abrir copia local existente",
+        "editFileRedownload": "Volver a descargar del servidor",
         "editRemoteTitle": "Editar: {name}",
         "editorPlaceholder": "Contenido del archivo remoto",
         "saveChanges": "Guardar cambios",
@@ -256,6 +263,8 @@
         "versionRollback": "Restaurar",
         "versionRolledBack": "Restaurado: {label}",
         "versionDeleted": "Versión eliminada",
+        "versionShowFiles": "Ver archivos respaldados",
+        "versionNoFiles": "No hay archivos registrados para esta versión.",
         "versionStatus": "Estado: {status}",
         "versionDate": "Creado: {date}",
         "chooseKeyFile": "Elegir archivo de llave…",
@@ -274,6 +283,9 @@
         "swap": "Intercambiar entornos",
         "run": "Comparar entornos",
         "running": "Comparando...",
+        "autoRescan": "Reescanear antes de comparar",
+        "scanningEnv": "Escaneando {name}...",
+        "compareStatus": "{status}",
         "chooseProject": "Elige primero un proyecto.",
         "enterNames": "Ingresa ambos nombres de entorno para comparar sus instantáneas más recientes.",
         "projectScope": "Comparando entornos en {project}.",
@@ -308,6 +320,17 @@
         "added": "Agregados {count}",
         "modified": "Modificados {count}",
         "deleted": "Eliminados {count}",
+        "changedLines": "línea(s) modificada(s)",
+        "viewDiff": "Ver diferencias",
+        "mergeMode": "Fusionar",
+        "deployMode": "Desplegar",
+        "applyMerge": "Aplicar {count} decisión(es)",
+        "keepSource": "Conservar origen",
+        "keepTarget": "Conservar destino",
+        "skipFile": "Omitir",
+        "sourceSide": "orig",
+        "targetSide": "dest",
+        "noDecisions": "Sin decisiones activas para aplicar",
         "status": {
             "added": "Agregado",
             "modified": "Modificado",
@@ -413,5 +436,14 @@
         "backupInsertFailed": "Falló la inserción del respaldo.",
         "unexpectedSqliteResult": "Formato inesperado del resultado de SQLite.",
         "unexpected": "Algo salió mal."
+    },
+    "update": {
+        "availableManual": "Actualización {version} disponible",
+        "downloading": "Descargando actualización…",
+        "downloaded": "Actualización {version} lista para instalar",
+        "manualHint": "Descarga la nueva versión desde GitHub.",
+        "restart": "Reiniciar para instalar",
+        "download": "Descargar",
+        "dismiss": "Cerrar"
     }
 }

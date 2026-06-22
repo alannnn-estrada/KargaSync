@@ -1,0 +1,193 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  # ── Build on each OS, upload installers to GitHub Releases ──────────────────
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+          - os: macos-latest
+            platform: mac
+          - os: ubuntu-latest
+            platform: linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate app icons
+        run: npm run build:icons
+
+      - name: Build packages
+        run: npm run make
+
+      - name: Upload to GitHub Release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          gh release create "$TAG" \
+            --title "KargaSync $TAG" \
+            --generate-notes \
+            --draft=false \
+            --prerelease=false \
+            || true
+          find out/make -type f \( \
+            -name "*.exe" \
+            -o -name "*.nupkg" \
+            -o -name "RELEASES" \
+            -o -name "*.zip" \
+            -o -name "*.deb" \
+            -o -name "*.rpm" \
+          \) | while read -r f; do
+            gh release upload "$TAG" "$f" --clobber
+          done
+
+      - name: Save Linux packages for apt/yum repo
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: |
+            out/make/deb/**/*.deb
+            out/make/rpm/**/*.rpm
+
+  # ── Build apt + yum repos on GitHub Pages ───────────────────────────────────
+  publish-linux-repo:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Linux packages
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-packages
+          path: packages/
+
+      - name: Install repo tools
+        run: sudo apt-get install -y dpkg-dev createrepo-c
+
+      - name: Build apt (Debian/Ubuntu) repository
+        run: |
+          mkdir -p repo/apt/pool/main
+          mkdir -p repo/apt/dists/stable/main/binary-amd64
+
+          find packages -name "*.deb" -exec cp {} repo/apt/pool/main/ \;
+
+          cd repo/apt
+          dpkg-scanpackages pool/main /dev/null > dists/stable/main/binary-amd64/Packages
+          gzip -k dists/stable/main/binary-amd64/Packages
+
+          # Release metadata
+          cat > dists/stable/Release << 'EOF'
+          Origin: KargaSync
+          Label: KargaSync
+          Codename: stable
+          Architectures: amd64
+          Components: main
+          Description: KargaSync official apt repository
+          EOF
+
+      - name: Build yum/dnf (Fedora/RHEL) repository
+        run: |
+          mkdir -p repo/rpm
+          find packages -name "*.rpm" -exec cp {} repo/rpm/ \;
+          createrepo_c repo/rpm/
+
+          # Convenience .repo file users can drop into /etc/yum.repos.d/
+          cat > repo/rpm/kargasync.repo << 'EOF'
+          [kargasync]
+          name=KargaSync
+          baseurl=https://alann-estrada-KSH.github.io/KargaSync/rpm
+          enabled=1
+          gpgcheck=0
+          EOF
+
+      - name: Generate install instructions page
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          cat > repo/index.html << EOF
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>KargaSync Linux packages</title>
+            <style>
+              body { font-family: monospace; max-width: 760px; margin: 2rem auto; padding: 0 1rem; background: #0d1117; color: #c9d1d9; }
+              h1 { color: #58a6ff; } h2 { color: #8b949e; margin-top: 2rem; }
+              pre { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 1rem; overflow-x: auto; }
+              code { color: #79c0ff; }
+              a { color: #58a6ff; }
+            </style>
+          </head>
+          <body>
+            <h1>KargaSync <span style="color:#3fb950">${TAG}</span></h1>
+            <p>Latest release: <a href="https://github.com/alann-estrada-KSH/KargaSync/releases/tag/${TAG}">${TAG} on GitHub</a></p>
+
+            <h2>Debian / Ubuntu — via apt</h2>
+            <pre><code># Add the repository (once)
+          echo "deb [trusted=yes] https://alann-estrada-KSH.github.io/KargaSync/apt stable main" \\
+            | sudo tee /etc/apt/sources.list.d/kargasync.list
+          sudo apt update
+
+          # Install
+          sudo apt install karga-sync
+
+          # Future updates
+          sudo apt update && sudo apt upgrade karga-sync</code></pre>
+
+            <h2>Fedora / RHEL / openSUSE — via dnf/yum</h2>
+            <pre><code># Add the repository (once)
+          sudo curl -o /etc/yum.repos.d/kargasync.repo \\
+            https://alann-estrada-KSH.github.io/KargaSync/rpm/kargasync.repo
+
+          # Install
+          sudo dnf install karga-sync
+
+          # Future updates
+          sudo dnf upgrade karga-sync</code></pre>
+
+            <h2>Manual download</h2>
+            <p>All installers available on <a href="https://github.com/alann-estrada-KSH/KargaSync/releases/tag/${TAG}">GitHub Releases</a>:</p>
+            <ul>
+              <li><code>.exe</code> — Windows installer</li>
+              <li><code>.zip</code> — macOS app</li>
+              <li><code>.deb</code> — Debian/Ubuntu package</li>
+              <li><code>.rpm</code> — Fedora/RHEL package</li>
+            </ul>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./repo
+          keep_files: false

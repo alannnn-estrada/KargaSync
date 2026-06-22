@@ -40,17 +40,35 @@ export const IPC_CHANNELS = {
     ignorePatternsSave: 'ignorePatterns:save',
     deployBatch: 'deploy:batch',
     versionsList: 'versions:list',
+    versionsFilesList: 'versions:filesList',
     versionsStart: 'versions:start',
     versionsBackupFile: 'versions:backupFile',
     versionsFinish: 'versions:finish',
     versionsAbort: 'versions:abort',
     versionsRollback: 'versions:rollback',
     versionsDelete: 'versions:delete',
+    fileDiffRead: 'fileDiff:read',
 } as const;
 
 export const DEPLOY_CHANNELS = {
     progress: 'deploy:progress',
 } as const;
+
+export const UPDATE_CHANNELS = {
+    available: 'update:available',
+    downloaded: 'update:downloaded',
+    install: 'update:install',
+} as const;
+
+export interface UpdateAvailableEvent {
+    version: string;
+    url?: string;
+    mode: 'downloading' | 'manual';
+}
+
+export interface UpdateDownloadedEvent {
+    version: string;
+}
 
 export interface DeployBatchInput {
     sourceEnvironmentId: number;
@@ -140,6 +158,35 @@ export interface BackupFileForVersionInput {
     versionId: number;
     serverId: number;
     remotePath: string;
+    credentialOverride?: string | RemoteFileCredentialOverrideDto;
+}
+
+export interface VersionFileDto {
+    remotePath: string;
+    localPath: string | null;
+    sizeBytes: number;
+    isNewFile: boolean;
+}
+
+export interface FileDiffInput {
+    sourceEnvironmentId: number;
+    targetEnvironmentId: number;
+    relativePath: string;
+}
+
+export interface FileDiffLine {
+    type: 'equal' | 'insert' | 'delete' | 'replace';
+    leftLineNo: number | null;
+    rightLineNo: number | null;
+    leftText: string;
+    rightText: string;
+}
+
+export interface FileDiffResult {
+    lines: FileDiffLine[];
+    leftTotal: number;
+    rightTotal: number;
+    changedCount: number;
 }
 
 export interface AppMenuAnchorDto {
@@ -224,11 +271,18 @@ export interface RendererApi {
     openRemoteFileExternal: (localPath: string) => Promise<void>;
     // Versions
     listVersions: (serverId: number) => Promise<VersionDto[]>;
+    listVersionFiles: (versionId: number) => Promise<VersionFileDto[]>;
     startVersionSession: (input: StartVersionInput) => Promise<{ id: number; storagePath: string }>;
-    backupFileForVersion: (input: BackupFileForVersionInput) => Promise<{ backed: boolean }>;
+    backupFileForVersion: (input: BackupFileForVersionInput) => Promise<{ backed: boolean; isNewFile?: boolean }>;
     finishVersionSession: (versionId: number) => Promise<void>;
     abortVersionSession: (versionId: number) => Promise<void>;
     rollbackVersion: (versionId: number) => Promise<void>;
     deleteVersion: (versionId: number) => Promise<boolean>;
     chooseKeyFile: () => Promise<string | null>;
+    readFileDiff: (input: FileDiffInput) => Promise<FileDiffResult>;
+    onUpdateAvailable: (callback: (event: UpdateAvailableEvent) => void) => () => void;
+    onUpdateDownloaded: (callback: (event: UpdateDownloadedEvent) => void) => () => void;
+    installUpdate: () => void;
+    openExternalUrl: (url: string) => Promise<void>;
+    openLocalFolder: (folderPath: string) => Promise<void>;
 }

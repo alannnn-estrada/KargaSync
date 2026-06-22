@@ -27,7 +27,10 @@
         "customEditorPath": "Custom editor path",
         "customEditorPathPlaceholder": "e.g. C:\\Program Files\\MyEditor\\editor.exe",
         "customEditorPathHint": "Full path to the executable. The file will be passed as the first argument.",
-        "autoSave": "Changes are persisted automatically to SQLite."
+        "autoSave": "Changes are persisted automatically to SQLite.",
+        "scanConcurrency": "Scan concurrency",
+        "scanConcurrencyHint": "Parallel connections used when scanning remote files. 0 = auto (half of CPU cores).",
+        "scanConcurrencyAuto": "Auto"
     },
     "changelog": {
         "title": "Changelog",
@@ -162,6 +165,10 @@
         "renamePrompt": "New name",
         "openRemoteFileConfirm": "Download and open this file with the default system app?",
         "redownloadConfirm": "\"{name}\" is already open for editing. Re-download from the server? Your local changes will be discarded.",
+        "editFileAlreadyOpen": "File already open for editing",
+        "editFileAlreadyOpenDesc": "What would you like to do with this file?",
+        "editFileOpenExisting": "Open existing local copy",
+        "editFileRedownload": "Re-download from server",
         "editRemoteTitle": "Editing: {name}",
         "editorPlaceholder": "Remote file content",
         "saveChanges": "Save changes",
@@ -256,6 +263,8 @@
         "versionRollback": "Restore",
         "versionRolledBack": "Restored: {label}",
         "versionDeleted": "Version deleted",
+        "versionShowFiles": "Show backed-up files",
+        "versionNoFiles": "No files recorded for this version.",
         "versionStatus": "Status: {status}",
         "versionDate": "Created: {date}",
         "chooseKeyFile": "Choose key file…",
@@ -274,6 +283,9 @@
         "swap": "Swap source and target environments",
         "run": "Compare environments",
         "running": "Comparing...",
+        "autoRescan": "Rescan before comparing",
+        "scanningEnv": "Scanning {name}...",
+        "compareStatus": "{status}",
         "chooseProject": "Choose a project first.",
         "enterNames": "Enter both environment names to compare their latest snapshots.",
         "projectScope": "Comparing environments in {project}.",
@@ -299,7 +311,8 @@
         "cancel": "Cancel",
         "yes": "Yes",
         "no": "No",
-        "close": "Close"
+        "close": "Close",
+        "loading": "Loading"
     },
     "diff": {
         "section": "Comparison",
@@ -308,6 +321,17 @@
         "added": "Added {count}",
         "modified": "Modified {count}",
         "deleted": "Deleted {count}",
+        "changedLines": "changed line(s)",
+        "viewDiff": "View diff",
+        "mergeMode": "Merge",
+        "deployMode": "Deploy",
+        "applyMerge": "Apply {count} decision(s)",
+        "keepSource": "Keep source",
+        "keepTarget": "Keep target",
+        "skipFile": "Skip",
+        "sourceSide": "src",
+        "targetSide": "tgt",
+        "noDecisions": "No active decisions to apply",
         "status": {
             "added": "Added",
             "modified": "Modified",
@@ -413,5 +437,14 @@
         "backupInsertFailed": "Backup insert failed.",
         "unexpectedSqliteResult": "Unexpected SQLite result shape.",
         "unexpected": "Something went wrong."
+    },
+    "update": {
+        "availableManual": "Update {version} available",
+        "downloading": "Downloading update…",
+        "downloaded": "Update {version} ready to install",
+        "manualHint": "Download the new version from GitHub.",
+        "restart": "Restart to install",
+        "download": "Download",
+        "dismiss": "Dismiss"
     }
 }

@@ -1,6 +1,6 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, shell } from 'electron';
 
-import { IPC_CHANNELS, LOCAL_FILE_CHANNELS, REMOTE_FILE_CHANNELS, DEPLOY_CHANNELS, type RendererApi, type DeployProgressEvent } from './shared/ipc/contracts';
+import { IPC_CHANNELS, LOCAL_FILE_CHANNELS, REMOTE_FILE_CHANNELS, DEPLOY_CHANNELS, UPDATE_CHANNELS, type RendererApi, type DeployProgressEvent, type UpdateAvailableEvent, type UpdateDownloadedEvent } from './shared/ipc/contracts';
 
 const api: RendererApi = {
     getAllProjects: () => ipcRenderer.invoke(IPC_CHANNELS.projectsGetAll),
@@ -69,6 +69,7 @@ const api: RendererApi = {
 
     // Versions
     listVersions: (serverId) => ipcRenderer.invoke(IPC_CHANNELS.versionsList, serverId),
+    listVersionFiles: (versionId) => ipcRenderer.invoke(IPC_CHANNELS.versionsFilesList, versionId),
     startVersionSession: (input) => ipcRenderer.invoke(IPC_CHANNELS.versionsStart, input),
     backupFileForVersion: (input) => ipcRenderer.invoke(IPC_CHANNELS.versionsBackupFile, input),
     finishVersionSession: (versionId) => ipcRenderer.invoke(IPC_CHANNELS.versionsFinish, versionId),
@@ -76,9 +77,29 @@ const api: RendererApi = {
     rollbackVersion: (versionId) => ipcRenderer.invoke(IPC_CHANNELS.versionsRollback, versionId),
     deleteVersion: (versionId) => ipcRenderer.invoke(IPC_CHANNELS.versionsDelete, versionId),
     chooseKeyFile: () => ipcRenderer.invoke(LOCAL_FILE_CHANNELS.chooseKeyFile),
+    readFileDiff: (input) => ipcRenderer.invoke(IPC_CHANNELS.fileDiffRead, input),
+    onUpdateAvailable: (callback) => {
+        const handler = (_event: Electron.IpcRendererEvent, data: UpdateAvailableEvent) => callback(data);
+        ipcRenderer.on(UPDATE_CHANNELS.available, handler);
+        return () => ipcRenderer.removeListener(UPDATE_CHANNELS.available, handler);
+    },
+    onUpdateDownloaded: (callback) => {
+        const handler = (_event: Electron.IpcRendererEvent, data: UpdateDownloadedEvent) => callback(data);
+        ipcRenderer.on(UPDATE_CHANNELS.downloaded, handler);
+        return () => ipcRenderer.removeListener(UPDATE_CHANNELS.downloaded, handler);
+    },
+    installUpdate: () => ipcRenderer.send(UPDATE_CHANNELS.install),
+    openExternalUrl: (url: string) => {
+        let parsed: URL;
+        try { parsed = new URL(url); } catch { return Promise.resolve(); }
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return Promise.resolve();
+        return shell.openExternal(url);
+    },
+    openLocalFolder: (folderPath: string) => shell.openPath(folderPath),
 };
 
 contextBridge.exposeInMainWorld('api', Object.freeze(api));
+contextBridge.exposeInMainWorld('platform', process.platform);
 
 function resolveLocalDefaultRoot(): string {
     const platform = process.platform;

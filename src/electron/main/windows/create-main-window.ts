@@ -2,7 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 
 export const createMainWindow = (): BrowserWindow => {
-    const iconPath = path.join(app.getAppPath(), 'src', 'assets', 'logo.png');
+    const iconPath = path.join(app.getAppPath(), 'src', 'assets', 'icons', '512x512.png');
 
     const mainWindow = new BrowserWindow({
         width: 1200,
@@ -17,6 +17,9 @@ export const createMainWindow = (): BrowserWindow => {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
+            sandbox: true,
+            webSecurity: true,
+            allowRunningInsecureContent: false,
         },
     });
 

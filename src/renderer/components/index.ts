@@ -5,3 +5,5 @@ export { default as RemoteFileExplorer } from './RemoteFileExplorer.vue';
 export { default as IgnorePatternsPanel } from './IgnorePatternsPanel.vue';
 export { default as DeployProgressModal } from './DeployProgressModal.vue';
 export { default as KeyboardShortcutsModal } from './KeyboardShortcutsModal.vue';
+export { default as FileDiffModal } from './FileDiffModal.vue';
+export { default as UpdateBanner } from './UpdateBanner.vue';

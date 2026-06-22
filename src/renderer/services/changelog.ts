@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it';
 import changelogV010 from '../../../changelog/v0.1.0.md?raw';
 import changelogV020 from '../../../changelog/v0.2.0.md?raw';
+import changelogV030 from '../../../changelog/v0.3.0.md?raw';
 
 export interface ChangelogEntry {
     version: string;
@@ -19,6 +20,7 @@ const markdown = new MarkdownIt({
 const changelogFiles: Record<string, string> = {
     '/changelog/v0.1.0.md': changelogV010,
     '/changelog/v0.2.0.md': changelogV020,
+    '/changelog/v0.3.0.md': changelogV030,
 };
 
 function toVersionKey(version: string): number[] {

@@ -2,9 +2,14 @@ import { app, BrowserWindow, Menu, nativeImage } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
+// Suppress Node.js experimental warnings (e.g. node:sqlite) — these are expected in Electron
+process.removeAllListeners('warning');
+process.on('warning', (w) => { if (w.name !== 'ExperimentalWarning') process.stderr.write(`${w.name}: ${w.message}\n`); });
+
 import { initializeDatabase, type DatabaseHandle } from '../../db/bootstrap';
 import { registerIpcHandlers } from './ipc/register-ipc-handlers';
 import { createMainWindow } from './windows/create-main-window';
+import { initUpdater } from './updater';
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
@@ -22,7 +27,7 @@ const onReady = (): void => {
     app.setName('KargaSync');
     Menu.setApplicationMenu(null);
 
-    const appLogoPath = path.join(app.getAppPath(), 'src', 'assets', 'logo.png');
+    const appLogoPath = path.join(app.getAppPath(), 'src', 'assets', 'icons', '512x512.png');
 
     if (process.platform === 'darwin') {
         app.dock?.setIcon(nativeImage.createFromPath(appLogoPath));
@@ -41,6 +46,7 @@ const onReady = (): void => {
     }
 
     createMainWindow();
+    initUpdater();
 };
 
 app.on('second-instance', () => {
