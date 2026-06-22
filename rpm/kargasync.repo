@@ -1,5 +1,5 @@
 [kargasync]
 name=KargaSync
-baseurl=https://alann-estrada-KSH.github.io/KargaSync/rpm
+baseurl=https://alannnn-estrada.github.io/KargaSync/rpm
 enabled=1
 gpgcheck=0
