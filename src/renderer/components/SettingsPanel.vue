@@ -71,10 +71,28 @@
                         v-model="customPathModel"
                         type="text"
                         class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2.5 text-sm text-(--app-text) outline-none ring-(--app-accent) transition focus:ring-1"
-                        :placeholder="t('settings.customEditorPathPlaceholder')"
+                        :placeholder="customEditorPlaceholder"
                         @blur="saveCustomPath" />
                     <p class="mt-1 text-xs text-(--app-muted)">{{ t('settings.customEditorPathHint') }}</p>
                 </div>
+            </div>
+
+            <!-- Scan concurrency -->
+            <div>
+                <p class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">
+                    {{ t('settings.scanConcurrency') }}
+                </p>
+                <div class="mt-2 flex items-center gap-3">
+                    <input
+                        v-model.number="scanConcurrencyModel"
+                        type="number"
+                        min="0"
+                        max="32"
+                        class="w-20 rounded-lg border border-(--app-border) bg-(--app-input) px-3 py-2 text-sm text-(--app-text) outline-none ring-(--app-accent) transition focus:ring-1"
+                        @change="saveScanConcurrency" />
+                    <span class="text-xs text-(--app-muted)">{{ scanConcurrencyModel === 0 ? t('settings.scanConcurrencyAuto') : '' }}</span>
+                </div>
+                <p class="mt-1 text-xs text-(--app-muted)">{{ t('settings.scanConcurrencyHint') }}</p>
             </div>
 
             <!-- Changelog -->
@@ -122,20 +140,36 @@ const themeOptions: { value: SupportedTheme; icon: string }[] = [
     { value: 'dark', icon: '🌙' },
 ];
 
-const editorOptions: { value: ExternalEditor; label: string; icon: string }[] = [
+const platform = typeof window !== 'undefined' ? window.platform : 'linux';
+const isWin = platform === 'win32';
+
+const ALL_EDITOR_OPTIONS: { value: ExternalEditor; label: string; icon: string; platforms?: string[] }[] = [
     { value: 'system', label: 'System', icon: '🖥️' },
     { value: 'vscode', label: 'VS Code', icon: '🔵' },
     { value: 'cursor', label: 'Cursor', icon: '⚡' },
     { value: 'windsurf', label: 'Windsurf', icon: '🌊' },
     { value: 'zed', label: 'Zed', icon: '🔷' },
-    { value: 'notepad++', label: 'Notepad++', icon: '📝' },
+    { value: 'notepad++', label: 'Notepad++', icon: '📝', platforms: ['win32'] },
     { value: 'custom', label: 'Custom', icon: '🔧' },
 ];
 
+const editorOptions = ALL_EDITOR_OPTIONS.filter(
+    (opt) => !opt.platforms || opt.platforms.includes(platform),
+);
+
+const customEditorPlaceholder = isWin
+    ? 'e.g. C:\\Program Files\\MyEditor\\editor.exe'
+    : 'e.g. /usr/bin/nano';
+
 const customPathModel = ref(settingsStore.customEditorPath);
+const scanConcurrencyModel = ref(settingsStore.scanConcurrency);
 
 watch(() => settingsStore.customEditorPath, (v) => {
     customPathModel.value = v;
+});
+
+watch(() => settingsStore.scanConcurrency, (v) => {
+    scanConcurrencyModel.value = v;
 });
 
 function saveCustomPath() {
@@ -162,6 +196,10 @@ const externalEditorModel = computed<ExternalEditor>({
         void settingsStore.setExternalEditor(value);
     },
 });
+
+function saveScanConcurrency() {
+    void settingsStore.setScanConcurrency(scanConcurrencyModel.value ?? 0);
+}
 
 function openChangelog(): void {
     changelogStore.openModal();

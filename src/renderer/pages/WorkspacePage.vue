@@ -115,9 +115,12 @@
                                         <span
                                             class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">{{
                                                 t('comparison.source') }}</span>
-                                        <input v-model="sourceEnvironmentName" type="text"
-                                            class="mt-2 w-full rounded-lg border border-(--app-border) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
-                                            :placeholder="t('comparison.sourcePlaceholder')" :disabled="isComparing">
+                                        <select v-model="sourceEnvironmentName"
+                                            class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-surface) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
+                                            :disabled="isComparing || !displayedEnvironments.length">
+                                            <option value="" disabled>{{ t('comparison.sourcePlaceholder') }}</option>
+                                            <option v-for="env in displayedEnvironments" :key="env.id" :value="env.name">{{ env.name }}</option>
+                                        </select>
                                     </label>
 
                                     <button type="button"
@@ -131,9 +134,12 @@
                                         <span
                                             class="text-xs font-medium uppercase tracking-[0.12em] text-(--app-muted)">{{
                                                 t('comparison.target') }}</span>
-                                        <input v-model="targetEnvironmentName" type="text"
-                                            class="mt-2 w-full rounded-lg border border-(--app-border) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
-                                            :placeholder="t('comparison.targetPlaceholder')" :disabled="isComparing">
+                                        <select v-model="targetEnvironmentName"
+                                            class="mt-2 w-full rounded-lg border border-(--app-border) bg-(--app-surface) px-3 py-2.5 text-sm outline-none ring-(--app-accent) transition focus:ring-1"
+                                            :disabled="isComparing || !displayedEnvironments.length">
+                                            <option value="" disabled>{{ t('comparison.targetPlaceholder') }}</option>
+                                            <option v-for="env in displayedEnvironments" :key="env.id" :value="env.name">{{ env.name }}</option>
+                                        </select>
                                     </label>
                                 </div>
 
@@ -148,8 +154,13 @@
                                         <svg v-else class="h-4 w-4 animate-spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
                                             <path d="M8 2a6 6 0 1 0 6 6" stroke-linecap="round"/>
                                         </svg>
-                                        {{ isComparing ? t('comparison.running') : t('comparison.run') }}
+                                        {{ isComparing ? (compareStatus || t('comparison.running')) : t('comparison.run') }}
                                     </button>
+
+                                    <label class="flex cursor-pointer items-center gap-2 text-sm text-(--app-muted)">
+                                        <input type="checkbox" v-model="autoRescanBeforeCompare" class="h-3.5 w-3.5" />
+                                        {{ t('comparison.autoRescan') }}
+                                    </label>
 
                                     <p class="text-sm text-(--app-muted)">
                                         {{ comparisonHint }}
@@ -411,7 +422,8 @@
                     </article>
 
                     <EnvironmentDiffTree v-if="comparisonResults" class="mt-4" :result="comparisonResults"
-                        :initially-expanded-depth="2" @deploy="handleDeploy" />
+                        :initially-expanded-depth="2" @deploy="handleDeploy" @view-diff="openFileDiff"
+                        @merge="handleMerge" />
 
                     <article v-else
                         class="mt-4 rounded-2xl border border-dashed border-(--app-border) bg-(--app-elevated) px-5 py-8 text-sm text-(--app-muted)">
@@ -432,6 +444,15 @@
         :target-label="comparisonResults?.summary.targetSnapshot.environmentName ?? ''"
         :progress="deployProgress"
         @close="closeDeployModal" />
+
+    <FileDiffModal
+        :visible="fileDiffVisible"
+        :source-environment-id="comparisonResults?.summary.sourceSnapshot.environmentId ?? null"
+        :target-environment-id="comparisonResults?.summary.targetSnapshot.environmentId ?? null"
+        :relative-path="fileDiffPath"
+        :source-label="comparisonResults?.summary.sourceSnapshot.environmentName ?? ''"
+        :target-label="comparisonResults?.summary.targetSnapshot.environmentName ?? ''"
+        @close="closeFileDiff" />
 
     <!-- Edit Modal for renaming projects/environments -->
     <div v-if="editModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="editModal.visible = false">
@@ -459,7 +480,7 @@ import { useI18n } from 'vue-i18n';
 import EnvironmentBindingModal from '../components/EnvironmentBindingModal.vue';
 
 import { useApi } from '../composables';
-import { EnvironmentDiffTree, IgnorePatternsPanel, DeployProgressModal } from '../components';
+import { EnvironmentDiffTree, IgnorePatternsPanel, DeployProgressModal, FileDiffModal } from '../components';
 import { useProjectComparisonStore } from '../stores';
 import type { GetAllProjectsResponseDto } from '../services';
 import { scanLocalSnapshot, scanRemoteSnapshot, getLatestSnapshot, deployBatch, onDeployProgress } from '../services/api';
@@ -494,6 +515,20 @@ const deployVisible = ref(false);
 const deployFiles = ref<string[]>([]);
 const deployProgress = ref<Map<string, DeployProgressEvent>>(new Map());
 const deployDone = ref(false);
+const autoRescanBeforeCompare = ref(true);
+const compareStatus = ref('');
+
+const fileDiffVisible = ref(false);
+const fileDiffPath = ref('');
+
+function openFileDiff(relativePath: string): void {
+    fileDiffPath.value = relativePath;
+    fileDiffVisible.value = true;
+}
+
+function closeFileDiff(): void {
+    fileDiffVisible.value = false;
+}
 
 const canCreateProject = computed(() => newProjectName.value.trim().length > 0);
 const canCompare = computed(() => (
@@ -624,6 +659,8 @@ async function loadEnvironmentsForSelectedProject(): Promise<void> {
                 // ignore per-environment binding load failures
             }
         }
+        // Update store after binding hydration so modal reads correct server/path
+        projectStore.setEnvironmentsForProject(projectId, [...environments.value]);
     } catch (err) {
         environments.value = [];
         projectStore.setEnvironmentsForProject(projectId, []);
@@ -748,8 +785,31 @@ async function handleCompareEnvironments(): Promise<void> {
 
     isComparing.value = true;
     comparisonError.value = '';
+    compareStatus.value = '';
 
     try {
+        if (autoRescanBeforeCompare.value) {
+            const sourceEnv = displayedEnvironments.value.find((e: any) => e.name === source);
+            const targetEnv = displayedEnvironments.value.find((e: any) => e.name === target);
+
+            if (sourceEnv) {
+                compareStatus.value = t('comparison.scanningEnv', { name: source });
+                await takeScanSnapshot(sourceEnv);
+                if (snapshotStates.value[sourceEnv.id]?.error) {
+                    throw new Error(snapshotStates.value[sourceEnv.id].error);
+                }
+            }
+
+            if (targetEnv) {
+                compareStatus.value = t('comparison.scanningEnv', { name: target });
+                await takeScanSnapshot(targetEnv);
+                if (snapshotStates.value[targetEnv.id]?.error) {
+                    throw new Error(snapshotStates.value[targetEnv.id].error);
+                }
+            }
+        }
+
+        compareStatus.value = t('comparison.running');
         const result = await compareEnvironments({
             projectId,
             sourceEnvironmentName: source,
@@ -757,7 +817,9 @@ async function handleCompareEnvironments(): Promise<void> {
         });
 
         projectStore.setComparisonResults(result);
+        compareStatus.value = '';
     } catch (error) {
+        compareStatus.value = '';
         comparisonError.value = formatUiErrorMessage(error, t);
     } finally {
         isComparing.value = false;
@@ -828,6 +890,53 @@ async function onBindingSave(payload: { environmentId: number; serverId: number;
         // ignore for now
     } finally {
         closeBindingModal();
+    }
+}
+
+async function handleMerge(decisions: Record<string, 'source' | 'target' | 'skip'>): Promise<void> {
+    const result = comparisonResults.value;
+    if (!result) return;
+
+    const sourceToTargetFiles = Object.entries(decisions)
+        .filter(([, d]) => d === 'source')
+        .map(([p]) => p);
+    const targetToSourceFiles = Object.entries(decisions)
+        .filter(([, d]) => d === 'target')
+        .map(([p]) => p);
+
+    if (sourceToTargetFiles.length === 0 && targetToSourceFiles.length === 0) return;
+
+    deployFiles.value = [...sourceToTargetFiles, ...targetToSourceFiles];
+    deployProgress.value = new Map();
+    deployDone.value = false;
+    deployVisible.value = true;
+
+    const unsubscribe = onDeployProgress((evt) => {
+        const next = new Map(deployProgress.value);
+        next.set(evt.file, evt);
+        deployProgress.value = next;
+    });
+
+    try {
+        if (sourceToTargetFiles.length > 0) {
+            await deployBatch({
+                sourceEnvironmentId: result.summary.sourceSnapshot.environmentId,
+                targetEnvironmentId: result.summary.targetSnapshot.environmentId,
+                filePaths: sourceToTargetFiles,
+            });
+        }
+        if (targetToSourceFiles.length > 0) {
+            await deployBatch({
+                sourceEnvironmentId: result.summary.targetSnapshot.environmentId,
+                targetEnvironmentId: result.summary.sourceSnapshot.environmentId,
+                filePaths: targetToSourceFiles,
+            });
+        }
+    } catch (_) {
+        // errors reported per-file via progress events
+    } finally {
+        unsubscribe();
+        deployDone.value = true;
     }
 }
 

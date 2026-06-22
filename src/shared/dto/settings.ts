@@ -7,6 +7,7 @@ export interface UpdateSettingsRequestDTO {
     theme?: SupportedTheme;
     externalEditor?: ExternalEditor;
     customEditorPath?: string;
+    scanConcurrency?: number;
 }
 
 export type UpdateSettingsResponseDTO = GetSettingsResponseDTO;

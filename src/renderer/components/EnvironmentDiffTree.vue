@@ -22,17 +22,49 @@
                             t('diff.deleted', { count: summaryCounts.deleted }) }}</span>
                 </div>
 
-                <button type="button"
-                    class="text-xs text-(--app-muted) hover:text-(--app-text) transition"
-                    @click="toggleSelectAll">
-                    {{ allSelected ? t('deploy.deselectAll') : t('deploy.selectAll') }}
-                </button>
+                <!-- Mode toggle -->
+                <div class="flex items-center overflow-hidden rounded-lg border border-(--app-border) text-xs">
+                    <button type="button"
+                        class="px-3 py-1.5 font-semibold transition"
+                        :class="currentMode === 'deploy' ? 'bg-(--app-accent) text-white' : 'text-(--app-muted) hover:text-(--app-text)'"
+                        @click="currentMode = 'deploy'">
+                        {{ t('diff.deployMode') }}
+                    </button>
+                    <button type="button"
+                        class="px-3 py-1.5 font-semibold transition"
+                        :class="currentMode === 'merge' ? 'bg-(--app-accent) text-white' : 'text-(--app-muted) hover:text-(--app-text)'"
+                        @click="currentMode = 'merge'">
+                        {{ t('diff.mergeMode') }}
+                    </button>
+                </div>
 
-                <button v-if="selectedFiles.size > 0" type="button"
-                    class="inline-flex items-center gap-2 rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-                    @click="emit('deploy', Array.from(selectedFiles))">
-                    ↑ {{ t('deploy.button', { count: selectedFiles.size }) }}
-                </button>
+                <!-- Deploy mode actions -->
+                <template v-if="currentMode === 'deploy'">
+                    <button type="button"
+                        class="text-xs text-(--app-muted) hover:text-(--app-text) transition"
+                        @click="toggleSelectAll">
+                        {{ allSelected ? t('deploy.deselectAll') : t('deploy.selectAll') }}
+                    </button>
+                    <button v-if="selectedFiles.size > 0" type="button"
+                        class="inline-flex items-center gap-2 rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                        @click="emit('deploy', Array.from(selectedFiles))">
+                        ↑ {{ t('deploy.button', { count: selectedFiles.size }) }}
+                    </button>
+                </template>
+
+                <!-- Merge mode actions -->
+                <template v-else>
+                    <button type="button"
+                        class="text-xs text-(--app-muted) hover:text-(--app-text) transition"
+                        @click="resetMergeDecisions">
+                        {{ t('deploy.selectAll') }}
+                    </button>
+                    <button v-if="activeDecisionsCount > 0" type="button"
+                        class="inline-flex items-center gap-2 rounded-lg bg-(--app-accent) px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                        @click="applyMerge">
+                        ⇄ {{ t('diff.applyMerge', { count: activeDecisionsCount }) }}
+                    </button>
+                </template>
             </div>
         </header>
 
@@ -44,8 +76,11 @@
         <ul v-else class="space-y-1">
             <EnvironmentDiffTreeNode v-for="node in treeNodes" :key="node.key" :node="node"
                 :expanded-state="expandedState" :selected-files="selectedFiles"
+                :merge-mode="currentMode === 'merge'" :merge-decisions="mergeDecisions"
                 @toggle-folder="toggleFolder"
-                @toggle-file="toggleFile" />
+                @toggle-file="toggleFile"
+                @view-diff="emit('view-diff', $event)"
+                @set-decision="setDecision" />
         </ul>
     </section>
 </template>
@@ -60,7 +95,7 @@ import EnvironmentDiffTreeNode from './EnvironmentDiffTreeNode.vue';
 import type { DiffFileStatus, DiffTreeFolderNode, DiffTreeNode } from './environment-diff-tree-types';
 
 type ComparisonInput = EnvironmentComparisonResult | CompareEnvironmentsResponseDto;
-
+type MergeDecision = 'source' | 'target' | 'skip';
 type StatusCounts = Record<DiffFileStatus, number>;
 
 const props = withDefaults(
@@ -75,12 +110,16 @@ const props = withDefaults(
 
 const emit = defineEmits<{
     (event: 'deploy', filePaths: string[]): void;
+    (event: 'view-diff', filePath: string): void;
+    (event: 'merge', decisions: Record<string, MergeDecision>): void;
 }>();
 
 const { t } = useI18n({ useScope: 'global' });
 
 const expandedState = ref<Record<string, boolean>>({ '/': true });
 const selectedFiles = ref<Set<string>>(new Set());
+const currentMode = ref<'deploy' | 'merge'>('deploy');
+const mergeDecisions = ref<Record<string, MergeDecision>>({});
 
 const summaryCounts = computed<StatusCounts>(() => ({
     added: props.result.summary.comparisonStats.added,
@@ -101,6 +140,10 @@ const allSelected = computed<boolean>(() =>
     allChangedFilePaths.value.every((p) => selectedFiles.value.has(p)),
 );
 
+const activeDecisionsCount = computed<number>(() =>
+    Object.values(mergeDecisions.value).filter((d) => d !== 'skip').length,
+);
+
 watch(
     treeNodes,
     (nextTreeNodes) => {
@@ -113,6 +156,7 @@ watch(
 
         expandedState.value = nextState;
         selectedFiles.value = new Set();
+        mergeDecisions.value = buildDefaultDecisions(nextTreeNodes);
     },
     { immediate: true },
 );
@@ -139,6 +183,35 @@ function toggleSelectAll(): void {
         selectedFiles.value = new Set();
     } else {
         selectedFiles.value = new Set(allChangedFilePaths.value);
+    }
+}
+
+function setDecision(path: string, decision: MergeDecision): void {
+    mergeDecisions.value = { ...mergeDecisions.value, [path]: decision };
+}
+
+function resetMergeDecisions(): void {
+    mergeDecisions.value = buildDefaultDecisions(treeNodes.value);
+}
+
+function applyMerge(): void {
+    emit('merge', { ...mergeDecisions.value });
+}
+
+function buildDefaultDecisions(nodes: DiffTreeNode[]): Record<string, MergeDecision> {
+    const out: Record<string, MergeDecision> = {};
+    collectDecisions(nodes, out);
+    return out;
+}
+
+function collectDecisions(nodes: DiffTreeNode[], out: Record<string, MergeDecision>): void {
+    for (const node of nodes) {
+        if (node.type === 'file') {
+            // default: source wins for added/modified, skip for deleted (safer)
+            out[node.path] = node.status === 'deleted' ? 'skip' : 'source';
+        } else {
+            collectDecisions(node.children, out);
+        }
     }
 }
 

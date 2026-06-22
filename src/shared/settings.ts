@@ -7,6 +7,7 @@ export interface AppSettings {
     theme: SupportedTheme;
     externalEditor: ExternalEditor;
     customEditorPath?: string;
+    scanConcurrency?: number;
 }
 
 export const SUPPORTED_LANGUAGES: readonly SupportedLanguage[] = ['en', 'es'];

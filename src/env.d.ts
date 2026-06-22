@@ -47,6 +47,7 @@ declare module 'node:sqlite' {
 declare global {
     interface Window {
         api: RendererApi;
+        platform: string;
     }
 }
 

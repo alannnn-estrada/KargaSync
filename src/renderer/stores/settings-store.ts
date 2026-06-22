@@ -21,7 +21,8 @@ function areSettingsEqual(left: AppSettings, right: AppSettings): boolean {
         left.language === right.language &&
         left.theme === right.theme &&
         left.externalEditor === right.externalEditor &&
-        (left.customEditorPath ?? '') === (right.customEditorPath ?? '')
+        (left.customEditorPath ?? '') === (right.customEditorPath ?? '') &&
+        (left.scanConcurrency ?? 0) === (right.scanConcurrency ?? 0)
     );
 }
 
@@ -56,6 +57,7 @@ function readCachedSettings(): AppSettings | null {
             theme: parsed.theme,
             externalEditor: parsed.externalEditor,
             customEditorPath: typeof parsed.customEditorPath === 'string' ? parsed.customEditorPath : undefined,
+            scanConcurrency: typeof parsed.scanConcurrency === 'number' ? parsed.scanConcurrency : undefined,
         };
     } catch {
         return null;
@@ -75,6 +77,7 @@ export const useSettingsStore = defineStore('settings', () => {
     const theme = ref<SupportedTheme>(DEFAULT_APP_SETTINGS.theme);
     const externalEditor = ref<ExternalEditor>(DEFAULT_APP_SETTINGS.externalEditor);
     const customEditorPath = ref<string>('');
+    const scanConcurrency = ref<number>(0);
     const hasLoaded = ref(false);
 
     let saveQueue: Promise<void> = Promise.resolve();
@@ -84,6 +87,7 @@ export const useSettingsStore = defineStore('settings', () => {
         theme.value = nextSettings.theme;
         externalEditor.value = nextSettings.externalEditor;
         customEditorPath.value = nextSettings.customEditorPath ?? '';
+        scanConcurrency.value = nextSettings.scanConcurrency ?? 0;
         cacheSettings(nextSettings);
     }
 
@@ -121,6 +125,7 @@ export const useSettingsStore = defineStore('settings', () => {
             theme: theme.value,
             externalEditor: externalEditor.value,
             customEditorPath: customEditorPath.value || undefined,
+            scanConcurrency: scanConcurrency.value,
         };
     }
 
@@ -143,7 +148,7 @@ export const useSettingsStore = defineStore('settings', () => {
         }
 
         language.value = nextLanguage;
-        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: customEditorPath.value || undefined });
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: customEditorPath.value || undefined, scanConcurrency: scanConcurrency.value });
 
         if (!hasLoaded.value) {
             return Promise.resolve();
@@ -158,7 +163,7 @@ export const useSettingsStore = defineStore('settings', () => {
         }
 
         theme.value = nextTheme;
-        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: customEditorPath.value || undefined });
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: customEditorPath.value || undefined, scanConcurrency: scanConcurrency.value });
 
         if (!hasLoaded.value) {
             return Promise.resolve();
@@ -173,7 +178,7 @@ export const useSettingsStore = defineStore('settings', () => {
         }
 
         externalEditor.value = next;
-        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: customEditorPath.value || undefined });
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: customEditorPath.value || undefined, scanConcurrency: scanConcurrency.value });
 
         if (!hasLoaded.value) {
             return Promise.resolve();
@@ -184,7 +189,18 @@ export const useSettingsStore = defineStore('settings', () => {
 
     function setCustomEditorPath(next: string): Promise<void> {
         customEditorPath.value = next;
-        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: next || undefined });
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: next || undefined, scanConcurrency: scanConcurrency.value });
+
+        if (!hasLoaded.value) {
+            return Promise.resolve();
+        }
+
+        return queuePersist();
+    }
+
+    function setScanConcurrency(next: number): Promise<void> {
+        scanConcurrency.value = Math.max(0, Math.floor(next));
+        cacheSettings({ language: language.value, theme: theme.value, externalEditor: externalEditor.value, customEditorPath: customEditorPath.value || undefined, scanConcurrency: scanConcurrency.value });
 
         if (!hasLoaded.value) {
             return Promise.resolve();
@@ -198,11 +214,13 @@ export const useSettingsStore = defineStore('settings', () => {
         theme,
         externalEditor,
         customEditorPath,
+        scanConcurrency,
         hasLoaded,
         loadSettings,
         setLanguage,
         setTheme,
         setExternalEditor,
         setCustomEditorPath,
+        setScanConcurrency,
     };
 });

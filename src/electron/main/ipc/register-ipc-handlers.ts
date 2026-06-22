@@ -116,13 +116,33 @@ function normalizeFtpRemotePath(remotePath: string): string {
     return remotePath.replace(/^\/+/, '') || '.';
 }
 
+/** Throws if any path segment is "..". Blocks path traversal for user-supplied relative paths. */
+function assertSafeRelativePath(relativePath: string): void {
+    const segments = relativePath.replace(/\\/g, '/').split('/');
+    if (segments.some((s) => s === '..')) {
+        throw new Error(`Path traversal rejected: ${relativePath}`);
+    }
+}
+
+/** Throws if resolved target escapes the base directory. */
+function assertWithinBase(base: string, target: string): void {
+    const resolvedBase = path.resolve(base);
+    const resolvedTarget = path.resolve(target);
+    const prefix = resolvedBase.endsWith(path.sep) ? resolvedBase : resolvedBase + path.sep;
+    if (!resolvedTarget.startsWith(prefix) && resolvedTarget !== resolvedBase) {
+        throw new Error(`Path traversal rejected: resolved path escapes base directory`);
+    }
+}
+
 function deployNormalizePosixPath(basePath: string, relativePath: string): string {
+    assertSafeRelativePath(relativePath);
     const base = basePath.endsWith('/') ? basePath : basePath + '/';
     const rel = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
     return base + rel;
 }
 
 function deployRelativeToLocal(relativePath: string): string {
+    assertSafeRelativePath(relativePath);
     const stripped = relativePath.replace(/^\/+/, '');
     return stripped.replace(/\//g, path.sep);
 }
@@ -236,6 +256,7 @@ function toSettingsDto(settings: GetSettingsResponseDTO): GetSettingsResponseDTO
         theme: settings.theme,
         externalEditor: (settings as any).externalEditor ?? 'system',
         customEditorPath: (settings as any).customEditorPath ?? undefined,
+        scanConcurrency: (settings as any).scanConcurrency ?? undefined,
     };
 }
 
@@ -244,6 +265,13 @@ function resolveSftpPrivateKey(keyContent: string): string {
         return convertPpkToPrivateKey(keyContent);
     }
     return keyContent;
+}
+
+function normalizeForHash(buf: Buffer): Buffer {
+    if (buf.includes(0)) return buf; // binary file — don't touch
+    const str = buf.toString('utf-8');
+    if (!str.includes('\r\n')) return buf;
+    return Buffer.from(str.replace(/\r\n/g, '\n'), 'utf-8');
 }
 
 export function registerIpcHandlers(database: DatabaseHandle): void {
@@ -279,8 +307,12 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         IPC_CHANNELS.serversTest,
         IPC_CHANNELS.environmentsList,
         IPC_CHANNELS.environmentsCreate,
+        IPC_CHANNELS.environmentsUpdate,
+        IPC_CHANNELS.environmentsDelete,
         IPC_CHANNELS.environmentBindingsAssign,
         IPC_CHANNELS.environmentBindingsList,
+        IPC_CHANNELS.projectsUpdate,
+        IPC_CHANNELS.projectsDelete,
             LOCAL_FILE_CHANNELS.defaultRoot,
             LOCAL_FILE_CHANNELS.chooseRoot,
             LOCAL_FILE_CHANNELS.list,
@@ -292,6 +324,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
             LOCAL_FILE_CHANNELS.delete,
         REMOTE_FILE_CHANNELS.list,
         REMOTE_FILE_CHANNELS.download,
+        REMOTE_FILE_CHANNELS.downloadToDirectory,
         REMOTE_FILE_CHANNELS.upload,
         REMOTE_FILE_CHANNELS.delete,
         REMOTE_FILE_CHANNELS.mkdir,
@@ -300,6 +333,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         REMOTE_FILE_CHANNELS.openExternal,
         LOCAL_FILE_CHANNELS.chooseKeyFile,
         IPC_CHANNELS.versionsList,
+        IPC_CHANNELS.versionsFilesList,
         IPC_CHANNELS.versionsStart,
         IPC_CHANNELS.versionsBackupFile,
         IPC_CHANNELS.versionsFinish,
@@ -309,6 +343,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         IPC_CHANNELS.ignorePatternsList,
         IPC_CHANNELS.ignorePatternsSave,
         IPC_CHANNELS.deployBatch,
+        IPC_CHANNELS.fileDiffRead,
     ].forEach((channel) => ipcMain.removeHandler(channel));
 
     ipcMain.handle(LOCAL_FILE_CHANNELS.defaultRoot, async () => {
@@ -366,8 +401,21 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
     });
 
     ipcMain.handle(LOCAL_FILE_CHANNELS.readFile, async (_event, filePath: string) => {
-        const buffer = await fs.readFile(filePath);
-        return buffer.toString('base64');
+        try {
+            const buffer = await fs.readFile(filePath);
+            return buffer.toString('base64');
+        } catch (err: any) {
+            // errno=-4094 / code=UNKNOWN on Windows = OneDrive/ProjFS cloud-only placeholder.
+            // The file has no local content. Surface a clear message instead of a raw UNKNOWN error.
+            if (err.code === 'UNKNOWN' && process.platform === 'win32') {
+                const name = path.basename(filePath);
+                throw new Error(
+                    `"${name}" is a cloud-only file (OneDrive) and is not available locally. ` +
+                    `Right-click it in File Explorer → "Always keep on this device", then retry.`,
+                );
+            }
+            throw err;
+        }
     });
 
     ipcMain.handle(LOCAL_FILE_CHANNELS.writeFile, async (_event, filePath: string, contentBase64: string) => {
@@ -1258,7 +1306,13 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
 
         if (cliCmd) {
             try {
-                const child = spawn(cliCmd, [localPath], { detached: true, stdio: 'ignore' });
+                // On Windows, cli tools like 'code' are .cmd batch scripts — not directly
+                // executable by spawn. Use cmd.exe /c instead of shell:true because
+                // shell:true wraps everything in outer quotes that break cmd's own arg parsing.
+                // Node.js auto-quotes args with spaces so localPath is safe.
+                const child = process.platform === 'win32'
+                    ? spawn('cmd.exe', ['/c', cliCmd, localPath], { detached: true, stdio: 'ignore' })
+                    : spawn(cliCmd, [localPath], { detached: true, stdio: 'ignore' });
                 child.on('error', async () => { await shell.openPath(localPath); });
                 try { child.unref(); } catch { /* ignore */ }
                 return;
@@ -1287,31 +1341,50 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         input: { projectId: number; environmentId: number; localPath: string; label?: string },
     ) => {
         const crypto = await import('node:crypto');
-        const files: import('../../../core/application/commands/create-snapshot').SnapshotFileInput[] = [];
+        type LocalRecord = { fullPath: string; relPath: string; size: number; mtime: string };
+        const records: LocalRecord[] = [];
 
         async function walkLocal(dir: string, base: string): Promise<void> {
             const entries = await fs.readdir(dir, { withFileTypes: true });
             for (const entry of entries) {
                 const fullPath = path.join(dir, entry.name);
-                const relPath = path.join(base, entry.name).replace(/\\/g, '/');
+                const relPath = (base ? base + '/' : '') + entry.name;
                 if (entry.isDirectory()) {
                     await walkLocal(fullPath, relPath);
                 } else if (entry.isFile()) {
                     const stat = await fs.stat(fullPath);
-                    const buf = await fs.readFile(fullPath);
-                    const hash = crypto.createHash('sha256').update(buf).digest('hex');
-                    files.push({
-                        relativePath: relPath,
-                        absolutePath: fullPath,
-                        contentHash: hash,
-                        sizeBytes: stat.size,
-                        modifiedAt: stat.mtime.toISOString(),
-                    });
+                    records.push({ fullPath, relPath, size: stat.size, mtime: stat.mtime.toISOString() });
                 }
             }
         }
 
         await walkLocal(input.localPath, '');
+
+        const settings = database.settings.getSettings();
+        const concurrency = settings.scanConcurrency && settings.scanConcurrency > 0
+            ? settings.scanConcurrency
+            : Math.max(1, os.cpus().length);
+
+        const batches: LocalRecord[][] = Array.from({ length: Math.min(concurrency, records.length || 1) }, () => []);
+        records.forEach((r, i) => batches[i % batches.length].push(r));
+
+        const files = (await Promise.all(batches.map(async (batch) => {
+            const results: import('../../../core/application/commands/create-snapshot').SnapshotFileInput[] = [];
+            for (const record of batch) {
+                const rawBuf = await fs.readFile(record.fullPath);
+                const buf = normalizeForHash(rawBuf);
+                const hash = crypto.createHash('sha256').update(buf).digest('hex');
+                results.push({
+                    relativePath: record.relPath,
+                    absolutePath: record.fullPath,
+                    contentHash: hash,
+                    sizeBytes: record.size,
+                    modifiedAt: record.mtime,
+                });
+            }
+            return results;
+        }))).flat();
+
         const snapshot = createSnapshotCommand.execute({
             projectId: input.projectId,
             environmentId: input.environmentId,
@@ -1326,95 +1399,130 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         input: { projectId: number; environmentId: number; serverId: number; remotePath: string; label?: string },
     ) => {
         const crypto = await import('node:crypto');
+        const { PassThrough } = await import('node:stream');
         const serverRow = database.projectManager.getServer(input.serverId);
         if (!serverRow) throw new Error(`Server not found: ${input.serverId}`);
         const credential = await database.credentials.getCredential(input.serverId);
 
-        const files: import('../../../core/application/commands/create-snapshot').SnapshotFileInput[] = [];
+        type RemoteFileRecord = { remotePath: string; relPath: string; sizeBytes: number; modifiedAt: string | null };
+        const records: RemoteFileRecord[] = [];
 
-        function buildProxyHash(size: number, mtime: string | undefined, relPath: string): string {
-            return crypto.createHash('sha256').update(`${mtime ?? ''}|${size}|${relPath}`).digest('hex');
-        }
+        const settings = database.settings.getSettings();
+        const concurrency = settings.scanConcurrency && settings.scanConcurrency > 0
+            ? settings.scanConcurrency
+            : Math.max(1, Math.floor(os.cpus().length / 2));
 
         if (serverRow.protocol === 'sftp') {
-            const client = new SftpClient();
-            try {
-                const connectOpts: any = { host: serverRow.host, port: serverRow.port, username: serverRow.username };
-                if (serverRow.authType === 'password') connectOpts.password = credential ?? undefined;
-                else connectOpts.privateKey = credential ?? undefined;
-                await withTimeout(client.connect(connectOpts), 'SFTP connect');
+            const connectOpts: any = { host: serverRow.host, port: serverRow.port, username: serverRow.username };
+            if (serverRow.authType === 'password') connectOpts.password = credential ?? undefined;
+            else connectOpts.privateKey = credential ? resolveSftpPrivateKey(credential) : undefined;
 
-                async function walkSftp(remotePath: string, base: string): Promise<void> {
-                    const listing = await client.list(remotePath || '.');
+            // Step 1: walk tree with one connection
+            const walkClient = new SftpClient();
+            try {
+                await withTimeout(walkClient.connect(connectOpts), 'SFTP connect');
+
+                const walkSftp = async (remotePath: string, base: string): Promise<void> => {
+                    const listing = await walkClient.list(remotePath || '.');
                     for (const item of listing) {
                         const itemRemote = `${remotePath === '/' ? '' : remotePath}/${item.name}`;
                         const relPath = `${base ? base + '/' : ''}${item.name}`;
                         if (item.type === 'd') {
                             await walkSftp(itemRemote, relPath);
                         } else if (item.type === '-') {
-                            const mtime = item.modifyTime ? new Date(item.modifyTime * 1000).toISOString() : undefined;
-                            files.push({
-                                relativePath: relPath,
-                                contentHash: buildProxyHash(item.size, mtime, relPath),
-                                sizeBytes: item.size,
-                                modifiedAt: mtime ?? null,
-                            });
+                            const mtime = item.modifyTime ? new Date(item.modifyTime * 1000).toISOString() : null;
+                            records.push({ remotePath: itemRemote, relPath, sizeBytes: item.size, modifiedAt: mtime });
                         }
                     }
-                }
+                };
 
-                const root = input.remotePath || '/';
-                await withTimeout(walkSftp(root, ''), 'SFTP scan');
+                await withTimeout(walkSftp(input.remotePath || '/', ''), 'SFTP walk');
             } finally {
-                try { await client.end(); } catch { /* ignore */ }
+                try { await walkClient.end(); } catch { /* ignore */ }
             }
-        } else {
-            // FTP
-            const ftpClient = createFtpClient();
-            try {
-                await withTimeout(ftpClient.access({
-                    host: normalizeFtpHost(serverRow.host),
-                    port: serverRow.port,
-                    user: serverRow.username,
-                    password: credential ?? undefined,
-                    secure: false,
-                }), 'FTP connect');
 
-                async function walkFtp(remotePath: string, base: string): Promise<void> {
+            // Step 2: hash content in parallel (N connections)
+            const batches: RemoteFileRecord[][] = Array.from({ length: Math.min(concurrency, records.length || 1) }, () => []);
+            records.forEach((r, i) => batches[i % batches.length].push(r));
+
+            const files = (await Promise.all(batches.map(async (batch) => {
+                if (batch.length === 0) return [];
+                const results: import('../../../core/application/commands/create-snapshot').SnapshotFileInput[] = [];
+                const batchClient = new SftpClient();
+                try {
+                    await batchClient.connect(connectOpts);
+                    for (const record of batch) {
+                        const rawBuf = await batchClient.get(record.remotePath) as Buffer;
+                        const buf = normalizeForHash(rawBuf);
+                        const hash = crypto.createHash('sha256').update(buf).digest('hex');
+                        results.push({ relativePath: record.relPath, contentHash: hash, sizeBytes: record.sizeBytes, modifiedAt: record.modifiedAt });
+                    }
+                } finally {
+                    try { await batchClient.end(); } catch { /* ignore */ }
+                }
+                return results;
+            }))).flat();
+
+            const snapshot = createSnapshotCommand.execute({
+                projectId: input.projectId,
+                environmentId: input.environmentId,
+                label: input.label ?? null,
+                files,
+            });
+            return toSnapshotDto(snapshot);
+
+        } else {
+            // FTP — single connection, walk + hash sequentially to avoid passive port exhaustion
+            const ftpAccess = {
+                host: normalizeFtpHost(serverRow.host),
+                port: serverRow.port,
+                user: serverRow.username,
+                password: credential ?? undefined,
+                secure: false,
+            };
+
+            const walkFtp = createFtpClient();
+            const files: import('../../../core/application/commands/create-snapshot').SnapshotFileInput[] = [];
+
+            try {
+                await withTimeout(walkFtp.access(ftpAccess), 'FTP connect');
+
+                const walkAndHash = async (remotePath: string, base: string): Promise<void> => {
                     const normalized = normalizeFtpRemotePath(remotePath);
-                    const listing = await ftpClient.list(normalized || '.');
+                    const listing = await walkFtp.list(normalized || '.');
                     for (const item of listing) {
                         if (!item.name || item.name === '.' || item.name === '..') continue;
                         const childRemote = `${remotePath}/${item.name}`;
                         const relPath = `${base ? base + '/' : ''}${item.name}`;
                         if (item.isDirectory) {
-                            await walkFtp(childRemote, relPath);
+                            await walkAndHash(childRemote, relPath);
                         } else {
-                            const mtime = item.rawModifiedAt ? new Date(item.rawModifiedAt).toISOString() : undefined;
-                            files.push({
-                                relativePath: relPath,
-                                contentHash: buildProxyHash(item.size ?? 0, mtime, relPath),
-                                sizeBytes: item.size ?? 0,
-                                modifiedAt: mtime ?? null,
-                            });
+                            const mtime = item.rawModifiedAt ? new Date(item.rawModifiedAt).toISOString() : null;
+                            const sizeBytes = item.size ?? 0;
+                            const chunks: Buffer[] = [];
+                            const pt = new PassThrough();
+                            pt.on('data', (chunk: Buffer) => chunks.push(chunk));
+                            await walkFtp.downloadTo(pt, normalizeFtpRemotePath(childRemote));
+                            const buf = normalizeForHash(Buffer.concat(chunks));
+                            const hash = crypto.createHash('sha256').update(buf).digest('hex');
+                            files.push({ relativePath: relPath, contentHash: hash, sizeBytes, modifiedAt: mtime });
                         }
                     }
-                }
+                };
 
-                const root = input.remotePath || '/';
-                await withTimeout(walkFtp(root, ''), 'FTP scan');
+                await walkAndHash(input.remotePath || '/', '');
             } finally {
-                try { ftpClient.close(); } catch { /* ignore */ }
+                try { walkFtp.close(); } catch { /* ignore */ }
             }
-        }
 
-        const snapshot = createSnapshotCommand.execute({
-            projectId: input.projectId,
-            environmentId: input.environmentId,
-            label: input.label ?? null,
-            files,
-        });
-        return toSnapshotDto(snapshot);
+            const snapshot = createSnapshotCommand.execute({
+                projectId: input.projectId,
+                environmentId: input.environmentId,
+                label: input.label ?? null,
+                files,
+            });
+            return toSnapshotDto(snapshot);
+        }
     });
 
     // ── Key file chooser ─────────────────────────────────────────────────────
@@ -1466,7 +1574,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
                 if (server.authType === 'password') opts.password = credential.password; else opts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
                 await withTimeout(client.connect(opts), 'SFTP connect');
                 await withTimeout(client.fastGet(remotePath, localPath), 'SFTP download');
-            } finally { client.end(); }
+            } finally { try { await client.end(); } catch { /* ignore */ } }
         }
     }
 
@@ -1484,7 +1592,7 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
                 if (server.authType === 'password') opts.password = credential.password; else opts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
                 await withTimeout(client.connect(opts), 'SFTP connect');
                 await withTimeout(client.fastPut(localPath, remotePath), 'SFTP upload');
-            } finally { client.end(); }
+            } finally { try { await client.end(); } catch { /* ignore */ } }
         }
     }
 
@@ -1493,6 +1601,33 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
             'SELECT * FROM versions WHERE server_id = ? ORDER BY created_at DESC',
         ).all(serverId) as any[];
         return rows.map(toVersionDto);
+    });
+
+    ipcMain.handle(IPC_CHANNELS.versionsFilesList, async (_event, versionId: number) => {
+        const version = database.db.prepare('SELECT * FROM versions WHERE id = ?').get(versionId) as any;
+        if (!version) throw new Error(`Version ${versionId} not found`);
+
+        const fileRows = database.db.prepare(
+            'SELECT remote_path, local_path, size_bytes FROM version_files WHERE version_id = ?',
+        ).all(versionId) as any[];
+
+        const result: import('../../../shared/ipc/contracts').VersionFileDto[] = fileRows.map((r: any) => ({
+            remotePath: r.remote_path,
+            localPath: r.local_path,
+            sizeBytes: r.size_bytes,
+            isNewFile: false,
+        }));
+
+        const newFilesJsonPath = path.join(version.storage_path, 'new_files.json');
+        try {
+            const jsonContent = await fs.readFile(newFilesJsonPath, 'utf-8');
+            const newPaths: string[] = JSON.parse(jsonContent);
+            for (const remotePath of newPaths) {
+                result.push({ remotePath, localPath: null, sizeBytes: 0, isNewFile: true });
+            }
+        } catch { /* no new_files.json — skip */ }
+
+        return result;
     });
 
     ipcMain.handle(IPC_CHANNELS.versionsStart, async (
@@ -1524,14 +1659,56 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         const server = database.projectManager.getServer(input.serverId);
         if (!server) throw new Error(`Server ${input.serverId} not found`);
         const storedCred = await database.credentials.getCredential(input.serverId);
-        const credential = { username: server.username, password: storedCred ?? undefined };
+        const resolved = resolveRemoteCredential(storedCred, input.credentialOverride);
+        const credential = { username: resolved.username ?? server.username, password: resolved.password };
 
         const relPath = input.remotePath.replace(/^\/+/, '').split('/').join(path.sep);
         const localDest = path.join(version.storage_path, relPath);
+        assertWithinBase(version.storage_path, localDest);
         await fs.mkdir(path.dirname(localDest), { recursive: true });
 
+        // Check existence and download in a single connection to avoid unreliable error-message parsing
+        let fileExistsOnRemote = false;
+        if (server.protocol === 'ftp') {
+            const ftpClient = createFtpClient();
+            try {
+                await withTimeout(ftpClient.access({ host: normalizeFtpHost(server.host), port: server.port, user: credential.username, password: credential.password, secure: false }), 'FTP connect');
+                try {
+                    await withTimeout(ftpClient.size(input.remotePath), 'FTP size');
+                    fileExistsOnRemote = true;
+                } catch (sizeErr: any) {
+                    if (sizeErr?.code !== 550) throw sizeErr; // real error: permission denied, network, etc.
+                    // code 550 = "File unavailable / No such file" — treat as new file
+                }
+                if (fileExistsOnRemote) {
+                    await withTimeout(ftpClient.downloadTo(localDest, input.remotePath), 'FTP download');
+                }
+            } finally { ftpClient.close(); }
+        } else {
+            const sftpClient = new SftpClient();
+            try {
+                const opts: any = { host: server.host, port: server.port, username: credential.username };
+                if (server.authType === 'password') opts.password = credential.password;
+                else opts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
+                await withTimeout(sftpClient.connect(opts), 'SFTP connect');
+                const existsResult = await withTimeout(sftpClient.exists(input.remotePath), 'SFTP exists');
+                fileExistsOnRemote = existsResult !== false && existsResult !== 'd';
+                if (fileExistsOnRemote) {
+                    await withTimeout(sftpClient.fastGet(input.remotePath, localDest), 'SFTP download');
+                }
+            } finally { try { await sftpClient.end(); } catch { /* ignore */ } }
+        }
+
+        if (!fileExistsOnRemote) {
+            const newFilesJsonPath = path.join(version.storage_path, 'new_files.json');
+            let existing: string[] = [];
+            try { existing = JSON.parse(await fs.readFile(newFilesJsonPath, 'utf-8')); } catch { /* first entry */ }
+            if (!existing.includes(input.remotePath)) existing.push(input.remotePath);
+            await fs.writeFile(newFilesJsonPath, JSON.stringify(existing, null, 2), 'utf-8');
+            return { backed: false, isNewFile: true };
+        }
+
         try {
-            await versionSftpDownload(server, credential, input.remotePath, localDest);
             const stat = await fs.stat(localDest);
             database.db.prepare(
                 `INSERT INTO version_files (version_id, remote_path, local_path, size_bytes) VALUES (?, ?, ?, ?)`,
@@ -1564,21 +1741,92 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         const server = database.projectManager.getServer(version.server_id);
         if (!server) throw new Error(`Server ${version.server_id} not found`);
         const storedCred = await database.credentials.getCredential(version.server_id);
-        const credential = { username: server.username, password: storedCred ?? undefined };
+        const resolved = resolveRemoteCredential(storedCred, undefined);
+        const credential = { username: resolved.username ?? server.username, password: resolved.password };
 
         const fileRows = database.db.prepare(
             'SELECT * FROM version_files WHERE version_id = ?',
         ).all(versionId) as any[];
 
+        // Load new-files list for this version (files that didn't exist before this version was created)
+        const newFilesJsonPath = path.join(version.storage_path, 'new_files.json');
+        let newFilePaths: string[] = [];
+        try {
+            newFilePaths = JSON.parse(await fs.readFile(newFilesJsonPath, 'utf-8'));
+        } catch { /* no new_files.json */ }
+
+        // Create pre-rollback snapshot to preserve current remote state
+        const preRollbackTimestamp = Date.now();
+        const preRollbackDir = path.join(
+            app.getPath('userData'),
+            'versions',
+            String(version.server_id),
+            `${preRollbackTimestamp}_pre_rollback`,
+        );
+        await fs.mkdir(preRollbackDir, { recursive: true });
+        const preRollbackResult = database.db.prepare(
+            `INSERT INTO versions (server_id, remote_path, label, status, storage_path) VALUES (?, '/', ?, 'running', ?)`,
+        ).run(version.server_id, `Pre-rollback (before restoring version ${versionId})`, preRollbackDir);
+        const preRollbackId = Number(preRollbackResult.lastInsertRowid);
+
+        // Back up current state of each file that will be restored
+        const allRemotePaths = [
+            ...fileRows.map((r: any) => r.remote_path),
+            ...newFilePaths,
+        ];
+        for (const remotePath of allRemotePaths) {
+            const relPath = remotePath.replace(/^\/+/, '').split('/').join(path.sep);
+            const preLocalDest = path.join(preRollbackDir, relPath);
+            try { assertWithinBase(preRollbackDir, preLocalDest); } catch { continue; }
+            await fs.mkdir(path.dirname(preLocalDest), { recursive: true });
+            try {
+                await versionSftpDownload(server, credential, remotePath, preLocalDest);
+                const stat = await fs.stat(preLocalDest);
+                database.db.prepare(
+                    `INSERT INTO version_files (version_id, remote_path, local_path, size_bytes) VALUES (?, ?, ?, ?)`,
+                ).run(preRollbackId, remotePath, preLocalDest, stat.size);
+                database.db.prepare(
+                    `UPDATE versions SET file_count = file_count + 1, bytes_stored = bytes_stored + ? WHERE id = ?`,
+                ).run(stat.size, preRollbackId);
+            } catch { /* file may not exist on remote — skip */ }
+        }
+        database.db.prepare(
+            `UPDATE versions SET status='completed', finished_at=CURRENT_TIMESTAMP WHERE id = ?`,
+        ).run(preRollbackId);
+
+        // Restore backed files to remote
         for (const fileRow of fileRows) {
+            if (!fileRow.local_path) continue;
             const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'karga-rollback-'));
             const tmpPath = path.join(tmpDir, path.basename(fileRow.local_path));
             try {
                 await fs.copyFile(fileRow.local_path, tmpPath);
                 await versionSftpUpload(server, credential, tmpPath, fileRow.remote_path);
             } finally {
-                try { await fs.rm(tmpPath); } catch { /* ignore */ }
+                try { await fs.rm(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
             }
+        }
+
+        // Delete new files from remote (they didn't exist before this version was created)
+        for (const remotePath of newFilePaths) {
+            try {
+                if (server.protocol === 'ftp') {
+                    const ftpClient = createFtpClient();
+                    try {
+                        await withTimeout(ftpClient.access({ host: normalizeFtpHost(server.host), port: server.port, user: credential.username, password: credential.password, secure: false }), 'FTP connect');
+                        await withTimeout(ftpClient.remove(remotePath), 'FTP delete');
+                    } finally { ftpClient.close(); }
+                } else {
+                    const sftpClient = new SftpClient();
+                    try {
+                        const opts: any = { host: server.host, port: server.port, username: credential.username };
+                        if (server.authType === 'password') opts.password = credential.password;
+                        else opts.privateKey = credential.password ? resolveSftpPrivateKey(credential.password) : undefined;
+                        await withTimeout(sftpClient.connect(opts), 'SFTP connect');
+                        await withTimeout(sftpClient.delete(remotePath), 'SFTP delete');
+                    } finally { try { await sftpClient.end(); } catch { /* ignore */ } }
+                }
+            } catch { /* ignore if file already gone */ }
         }
     });
 
@@ -1588,5 +1836,135 @@ export function registerIpcHandlers(database: DatabaseHandle): void {
         try { await fs.rm(version.storage_path, { recursive: true, force: true }); } catch { /* ignore */ }
         database.db.prepare('DELETE FROM versions WHERE id = ?').run(versionId);
         return true;
+    });
+
+    // ── File diff ─────────────────────────────────────────────────────────────
+
+    ipcMain.handle(IPC_CHANNELS.fileDiffRead, async (
+        _event,
+        input: import('../../../shared/ipc/contracts').FileDiffInput,
+    ) => {
+        const { PassThrough } = await import('node:stream');
+
+        const readContentForEnvironment = async (environmentId: number, relativePath: string): Promise<string> => {
+            assertSafeRelativePath(relativePath);
+            const bindings = database.projectManager.listEnvironmentBindings(environmentId);
+            if (bindings.length === 0) throw new Error(`No binding for environment ${environmentId}`);
+            const binding = bindings[0];
+
+            if (binding.bindingType === 'local' && binding.localPath) {
+                const fullPath = path.join(binding.localPath, relativePath.replace(/\//g, path.sep));
+                assertWithinBase(binding.localPath, fullPath);
+                const buf = await fs.readFile(fullPath);
+                return buf.toString('utf-8');
+            }
+
+            if (binding.bindingType === 'remote' && binding.serverId && binding.remotePath) {
+                const server = database.projectManager.getServer(binding.serverId);
+                if (!server) throw new Error(`Server ${binding.serverId} not found`);
+                const credential = await database.credentials.getCredential(binding.serverId);
+                const remoteFile = `${binding.remotePath.replace(/\/$/, '')}/${relativePath}`;
+
+                if (server.protocol === 'sftp') {
+                    const client = new SftpClient();
+                    try {
+                        const connectOpts: any = { host: server.host, port: server.port, username: server.username };
+                        if (server.authType === 'password') connectOpts.password = credential ?? undefined;
+                        else connectOpts.privateKey = credential ? resolveSftpPrivateKey(credential) : undefined;
+                        await withTimeout(client.connect(connectOpts), 'SFTP connect');
+                        const buf = await client.get(remoteFile) as Buffer;
+                        return buf.toString('utf-8');
+                    } finally {
+                        try { await client.end(); } catch { /* ignore */ }
+                    }
+                } else {
+                    const ftpClient = createFtpClient();
+                    try {
+                        await withTimeout(ftpClient.access({
+                            host: normalizeFtpHost(server.host),
+                            port: server.port,
+                            user: server.username,
+                            password: credential ?? undefined,
+                            secure: false,
+                        }), 'FTP connect');
+                        const chunks: Buffer[] = [];
+                        const pt = new PassThrough();
+                        pt.on('data', (chunk: Buffer) => chunks.push(chunk));
+                        await ftpClient.downloadTo(pt, normalizeFtpRemotePath(remoteFile));
+                        return Buffer.concat(chunks).toString('utf-8');
+                    } finally {
+                        try { ftpClient.close(); } catch { /* ignore */ }
+                    }
+                }
+            }
+
+            throw new Error(`Cannot resolve content for environment ${environmentId}`);
+        };
+
+        const [leftContent, rightContent] = await Promise.all([
+            readContentForEnvironment(input.sourceEnvironmentId, input.relativePath),
+            readContentForEnvironment(input.targetEnvironmentId, input.relativePath),
+        ]);
+
+        const leftLines = leftContent.split('\n');
+        const rightLines = rightContent.split('\n');
+
+        // LCS-based line diff
+        const m = leftLines.length;
+        const n = rightLines.length;
+        const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                dp[i][j] = leftLines[i - 1] === rightLines[j - 1]
+                    ? dp[i - 1][j - 1] + 1
+                    : Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+
+        type RawOp = { type: 'equal' | 'insert' | 'delete'; li: number | null; ri: number | null; text: string };
+        const raw: RawOp[] = [];
+
+        const bt = (i: number, j: number): void => {
+            if (i === 0 && j === 0) return;
+            if (i > 0 && j > 0 && leftLines[i - 1] === rightLines[j - 1]) {
+                bt(i - 1, j - 1);
+                raw.push({ type: 'equal', li: i - 1, ri: j - 1, text: leftLines[i - 1] });
+            } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+                bt(i, j - 1);
+                raw.push({ type: 'insert', li: null, ri: j - 1, text: rightLines[j - 1] });
+            } else {
+                bt(i - 1, j);
+                raw.push({ type: 'delete', li: i - 1, ri: null, text: leftLines[i - 1] });
+            }
+        };
+
+        bt(m, n);
+
+        const lines: import('../../../shared/ipc/contracts').FileDiffLine[] = [];
+        let k = 0;
+        let changedCount = 0;
+
+        while (k < raw.length) {
+            const op = raw[k];
+            if (op.type === 'equal') {
+                lines.push({ type: 'equal', leftLineNo: op.li !== null ? op.li + 1 : null, rightLineNo: op.ri !== null ? op.ri + 1 : null, leftText: op.text, rightText: op.text });
+                k++;
+            } else if (op.type === 'delete' && k + 1 < raw.length && raw[k + 1].type === 'insert') {
+                const next = raw[k + 1];
+                lines.push({ type: 'replace', leftLineNo: op.li !== null ? op.li + 1 : null, rightLineNo: next.ri !== null ? next.ri + 1 : null, leftText: op.text, rightText: next.text });
+                changedCount++;
+                k += 2;
+            } else if (op.type === 'delete') {
+                lines.push({ type: 'delete', leftLineNo: op.li !== null ? op.li + 1 : null, rightLineNo: null, leftText: op.text, rightText: '' });
+                changedCount++;
+                k++;
+            } else {
+                lines.push({ type: 'insert', leftLineNo: null, rightLineNo: op.ri !== null ? op.ri + 1 : null, leftText: '', rightText: op.text });
+                changedCount++;
+                k++;
+            }
+        }
+
+        return { lines, leftTotal: m, rightTotal: n, changedCount };
     });
 }

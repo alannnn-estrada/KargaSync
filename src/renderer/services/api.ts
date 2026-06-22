@@ -191,6 +191,9 @@ export type {
 export const listVersions = (serverId: number) =>
     getRendererApi().listVersions(serverId);
 
+export const listVersionFiles = (versionId: number) =>
+    getRendererApi().listVersionFiles(versionId);
+
 export const startVersionSession = (input: import('../../shared/ipc/contracts').StartVersionInput) =>
     getRendererApi().startVersionSession(input);
 
@@ -214,6 +217,9 @@ export const chooseKeyFile = () =>
 
 export type { VersionDto } from '../../shared/ipc/contracts';
 
+export const openLocalFolder = (folderPath: string) =>
+    getRendererApi().openLocalFolder(folderPath);
+
 export const listIgnorePatterns = (projectId: number): Promise<string[]> =>
     getRendererApi().listIgnorePatterns(projectId);
 
@@ -225,6 +231,9 @@ export const deployBatch = (input: import('../../shared/ipc/contracts').DeployBa
 
 export const onDeployProgress = (callback: (event: import('../../shared/ipc/contracts').DeployProgressEvent) => void) =>
     getRendererApi().onDeployProgress(callback);
+
+export const readFileDiff = (input: import('../../shared/ipc/contracts').FileDiffInput) =>
+    getRendererApi().readFileDiff(input);
 
 export const localFilesService: LocalFilesApi = {
     getDefaultRoot: () => getRendererApi().getLocalFilesDefaultRoot(),

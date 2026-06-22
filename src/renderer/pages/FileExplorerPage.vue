@@ -705,8 +705,8 @@
 
                     <ul v-if="!versionsHistoryLoading" class="space-y-2">
                         <li v-for="v in versionsHistoryList" :key="v.id"
-                            class="rounded-xl border border-(--app-border) bg-(--app-elevated) p-4">
-                            <div class="flex items-start gap-3">
+                            class="rounded-xl border border-(--app-border) bg-(--app-elevated)">
+                            <div class="flex items-start gap-3 p-4">
                                 <span class="mt-0.5 h-2 w-2 shrink-0 rounded-full"
                                     :class="v.status === 'completed' ? 'bg-(--status-added-text)' : v.status === 'failed' ? 'bg-(--status-deleted-text)' : 'bg-(--app-muted)'"/>
                                 <div class="min-w-0 flex-1">
@@ -714,9 +714,24 @@
                                     <p class="mt-0.5 text-xs text-(--app-muted)">
                                         {{ formatRelativeDate(v.createdAt) }} · {{ t('servers.versionFilesCount', { count: v.fileCount }) }} · {{ formatFileSize(v.bytesStored) }}
                                     </p>
+                                    <div class="mt-0.5 flex items-center gap-1">
+                                        <span class="truncate font-mono text-xs text-(--app-muted)/70" :title="v.storagePath">{{ v.storagePath.split(/[\\/]/).filter(Boolean).pop() }}</span>
+                                        <button type="button"
+                                            class="shrink-0 rounded p-0.5 text-(--app-muted) transition hover:text-(--app-accent)"
+                                            :title="v.storagePath"
+                                            @click.stop="openLocalFolder(v.storagePath)">
+                                            <svg class="h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5a1 1 0 0 1 1-1h3l1.5 2H13a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5Z"/></svg>
+                                        </button>
+                                    </div>
                                     <p v-if="v.errorMessage" class="mt-1 text-xs text-(--status-deleted-text) break-all">{{ v.errorMessage }}</p>
                                 </div>
                                 <div class="flex shrink-0 gap-1.5">
+                                    <button type="button"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-(--app-border) bg-(--app-elevated) px-2 py-1.5 text-xs font-semibold text-(--app-muted) transition hover:border-(--app-accent) hover:text-(--app-accent)"
+                                        :title="t('servers.versionShowFiles')"
+                                        @click="toggleVersionFiles(v)">
+                                        <svg class="h-3.5 w-3.5 transition-transform" :class="versionsExpandedFiles.has(v.id) ? 'rotate-90' : ''" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 4l4 4-4 4"/></svg>
+                                    </button>
                                     <button type="button"
                                         class="inline-flex items-center gap-1.5 rounded-lg border border-(--app-border) bg-(--app-elevated) px-3 py-1.5 text-xs font-semibold text-(--app-text) transition hover:border-(--app-accent) hover:text-(--app-accent) disabled:opacity-50"
                                         :disabled="v.status !== 'completed' || versionsRollingBack[v.id] || versionsDeleting[v.id]"
@@ -733,6 +748,21 @@
                                         <svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 5h8M6 5V3h4v2M5 5l.75 8h4.5L11 5"/></svg>
                                     </button>
                                 </div>
+                            </div>
+                            <!-- Expandable file list -->
+                            <div v-if="versionsExpandedFiles.has(v.id)" class="border-t border-(--app-border) px-4 pb-3 pt-2">
+                                <p v-if="versionsFilesLoading[v.id]" class="py-2 text-center text-xs text-(--app-muted)">{{ t('common.loading') }}</p>
+                                <p v-else-if="!versionsFilesCache[v.id] || versionsFilesCache[v.id].length === 0" class="py-2 text-xs text-(--app-muted)">{{ t('servers.versionNoFiles') }}</p>
+                                <ul v-else class="max-h-48 overflow-y-auto space-y-0.5">
+                                    <li v-for="f in versionsFilesCache[v.id]" :key="f.remotePath"
+                                        class="flex items-center gap-2 rounded px-1 py-0.5">
+                                        <span v-if="f.isNewFile"
+                                            class="shrink-0 rounded px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-(--status-added-bg) text-(--status-added-text)">new</span>
+                                        <svg v-else class="h-3.5 w-3.5 shrink-0 text-(--app-muted)" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M5 6h6M5 9h4"/></svg>
+                                        <span class="min-w-0 truncate font-mono text-xs text-(--app-text)" :title="f.remotePath">{{ f.remotePath }}</span>
+                                        <span v-if="!f.isNewFile" class="ml-auto shrink-0 text-xs text-(--app-muted)">{{ formatFileSize(f.sizeBytes) }}</span>
+                                    </li>
+                                </ul>
                             </div>
                         </li>
                     </ul>
@@ -898,6 +928,43 @@
         </div>
 
         <!-- Input Modal -->
+        <!-- Re-open edit session modal -->
+        <div v-if="remoteEditReopenModal"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            @click.self="handleEditReopenCancel">
+            <div class="w-full max-w-sm rounded-2xl border border-(--app-border) bg-(--app-surface) p-6 shadow-(--app-shadow)">
+                <div class="flex items-start gap-3">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--app-accent)/15 text-(--app-accent)">
+                        <svg class="h-5 w-5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3.5 1.5h6l3 3v9.5a.5.5 0 0 1-.5.5h-8.5a.5.5 0 0 1-.5-.5V2a.5.5 0 0 1 .5-.5Z"/><path d="M9.5 1.5v3.5h3"/><path d="M6 9l1.5 1.5L10 8"/>
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h2 class="text-base font-semibold text-(--app-text)">{{ t('servers.editFileAlreadyOpen') }}</h2>
+                        <p class="mt-1 break-all text-sm text-(--app-muted)">{{ remoteEditReopenModal.entry.name }}</p>
+                        <p class="mt-1 text-sm text-(--app-muted)">{{ t('servers.editFileAlreadyOpenDesc') }}</p>
+                    </div>
+                </div>
+                <div class="mt-5 flex flex-col gap-2">
+                    <button type="button"
+                        class="w-full rounded-lg border border-(--app-border) bg-(--app-muted-surface) px-4 py-2.5 text-sm font-semibold text-(--app-text) transition hover:border-(--app-accent)"
+                        @click="handleEditReopenExisting">
+                        {{ t('servers.editFileOpenExisting') }}
+                    </button>
+                    <button type="button"
+                        class="w-full rounded-lg bg-(--app-accent) px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                        @click="handleEditReopenFresh">
+                        {{ t('servers.editFileRedownload') }}
+                    </button>
+                    <button type="button"
+                        class="w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-(--app-muted) transition hover:text-(--app-text)"
+                        @click="handleEditReopenCancel">
+                        {{ t('actions.cancel') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div v-if="inputModalVisible"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div
@@ -928,7 +995,8 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { listServers, localFilesService, remoteFilesService, listVersions, startVersionSession, backupFileForVersion, finishVersionSession, abortVersionSession, rollbackVersion, deleteVersion, type GetAllServersResponseDto, type VersionDto } from '../services/api';
+import { listServers, localFilesService, remoteFilesService, listVersions, listVersionFiles, startVersionSession, backupFileForVersion, finishVersionSession, abortVersionSession, rollbackVersion, deleteVersion, openLocalFolder, type GetAllServersResponseDto, type VersionDto } from '../services/api';
+import type { VersionFileDto } from '../../shared/ipc/contracts';
 
 type ExplorerEntry = {
     name: string;
@@ -1036,6 +1104,11 @@ const inputModalDefaultValue = ref('');
 const inputModalCallback = ref<((value: string) => void | Promise<void>) | null>(null);
 const remoteEditSessions = new Map<string, RemoteEditSession>();
 const activeRemoteEditSessionCount = ref(0);
+const remoteEditReopenModal = ref<{
+    entry: ExplorerEntry;
+    existingSession: RemoteEditSession;
+    sessionKey: string;
+} | null>(null);
 const activeExplorerPane = ref<ContextMenuScope>('local');
 const transferQueue = ref<TransferQueueItem[]>([]);
 const transferLog = ref<TransferLogEntry[]>([]);
@@ -1093,6 +1166,9 @@ const versionsHistoryLoading = ref(false);
 const versionsRollingBack = ref<Record<number, boolean>>({});
 const versionsDeleting = ref<Record<number, boolean>>({});
 const versionsRollbackError = ref('');
+const versionsExpandedFiles = ref<Set<number>>(new Set());
+const versionsFilesCache = ref<Record<number, VersionFileDto[]>>({});
+const versionsFilesLoading = ref<Record<number, boolean>>({});
 const localActionsMenuOpen = ref(false);
 const remoteActionsMenuOpen = ref(false);
 
@@ -1133,8 +1209,9 @@ async function backupBeforeUpload(remotePath: string): Promise<void> {
     const session = activeVersionSession.value;
     if (!session || !selectedServerId.value) return;
     try {
-        const result = await backupFileForVersion({ versionId: session.id, serverId: selectedServerId.value, remotePath });
+        const result = await backupFileForVersion({ versionId: session.id, serverId: selectedServerId.value, remotePath, credentialOverride: getCredentialOverride() });
         if (result.backed) activeVersionSession.value = { ...session, backedCount: session.backedCount + 1 };
+        else if (result.isNewFile) activeVersionSession.value = { ...session, backedCount: session.backedCount + 1 };
     } catch {
         // non-blocking — upload continues even if backup fails
     }
@@ -1171,9 +1248,26 @@ async function doDeleteVersion(version: VersionDto): Promise<void> {
     try {
         await deleteVersion(version.id);
         versionsHistoryList.value = versionsHistoryList.value.filter(v => v.id !== version.id);
+        versionsExpandedFiles.value = new Set([...versionsExpandedFiles.value].filter(x => x !== version.id));
+        delete versionsFilesCache.value[version.id];
     } finally {
         versionsDeleting.value = { ...versionsDeleting.value, [version.id]: false };
     }
+}
+
+async function toggleVersionFiles(version: VersionDto): Promise<void> {
+    const id = version.id;
+    if (versionsExpandedFiles.value.has(id)) {
+        versionsExpandedFiles.value = new Set([...versionsExpandedFiles.value].filter(x => x !== id));
+        return;
+    }
+    versionsExpandedFiles.value = new Set([...versionsExpandedFiles.value, id]);
+    if (versionsFilesCache.value[id]) return;
+    versionsFilesLoading.value = { ...versionsFilesLoading.value, [id]: true };
+    try {
+        versionsFilesCache.value = { ...versionsFilesCache.value, [id]: await listVersionFiles(id) };
+    } catch { versionsFilesCache.value = { ...versionsFilesCache.value, [id]: [] }; }
+    finally { versionsFilesLoading.value = { ...versionsFilesLoading.value, [id]: false }; }
 }
 
 // Sort + filter state
@@ -3311,44 +3405,23 @@ async function openRemoteFileWithPrompt(entry: ExplorerEntry): Promise<void> {
     }
 }
 
-async function openRemoteFileForEdit(entry: ExplorerEntry): Promise<void> {
-    if (!selectedServerId.value || entry.isDirectory) {
-        return;
-    }
-
-    const sessionKey = getRemoteEditSessionKey(selectedServerId.value, entry.path);
-    const existingSession = remoteEditSessions.get(sessionKey);
-
-    if (existingSession) {
-        const confirmed = window.confirm(t('servers.redownloadConfirm', { name: entry.name }));
-        if (!confirmed) return;
-        window.clearInterval(existingSession.pollTimerId);
-        remoteEditSessions.delete(sessionKey);
-        updateActiveRemoteEditSessionCount();
-    }
-
+async function startRemoteEditSession(entry: ExplorerEntry, sessionKey: string): Promise<void> {
     const operationLabel = `${t('servers.editFile')}: ${entry.name}`;
 
     try {
-        await runTransferOperation(operationLabel, 'remote-to-local', async ({ operationId, setProgress, throwIfCancelled }) => {
+        await runTransferOperation(operationLabel, 'remote-to-local', async ({ setProgress, throwIfCancelled }) => {
             throwIfCancelled();
 
             const credentialOverride = getCredentialOverride();
-            const localDownloadDirectory = await getCurrentLocalDownloadDirectory();
-            const localDestinationPath = joinLocalPath(localDownloadDirectory, entry.name);
             setProgress(25);
 
-            const localPathFromDownload = await downloadRemoteFileIntoLocalPath(
+            // Download to a unique OS temp dir (mkdtemp 'karga-') — avoids collisions between
+            // files with the same name in different remote directories
+            const localPathFromDownload = await remoteFilesService.downloadRemoteFile(
                 selectedServerId.value!,
-                entry,
-                localDestinationPath,
-                operationId,
+                entry.path,
+                credentialOverride,
             );
-
-            if (!localPathFromDownload) {
-                setProgress(100);
-                return;
-            }
 
             setProgress(70);
             throwIfCancelled();
@@ -3382,6 +3455,43 @@ async function openRemoteFileForEdit(entry: ExplorerEntry): Promise<void> {
     }
 }
 
+async function openRemoteFileForEdit(entry: ExplorerEntry): Promise<void> {
+    if (!selectedServerId.value || entry.isDirectory) {
+        return;
+    }
+
+    const sessionKey = getRemoteEditSessionKey(selectedServerId.value, entry.path);
+    const existingSession = remoteEditSessions.get(sessionKey);
+
+    if (existingSession) {
+        remoteEditReopenModal.value = { entry, existingSession, sessionKey };
+        return;
+    }
+
+    await startRemoteEditSession(entry, sessionKey);
+}
+
+async function handleEditReopenExisting(): Promise<void> {
+    const modal = remoteEditReopenModal.value;
+    if (!modal) return;
+    remoteEditReopenModal.value = null;
+    await remoteFilesService.openRemoteFileExternal(modal.existingSession.localPath);
+}
+
+async function handleEditReopenFresh(): Promise<void> {
+    const modal = remoteEditReopenModal.value;
+    if (!modal) return;
+    remoteEditReopenModal.value = null;
+    window.clearInterval(modal.existingSession.pollTimerId);
+    remoteEditSessions.delete(modal.sessionKey);
+    updateActiveRemoteEditSessionCount();
+    await startRemoteEditSession(modal.entry, modal.sessionKey);
+}
+
+function handleEditReopenCancel(): void {
+    remoteEditReopenModal.value = null;
+}
+
 async function syncRemoteEditSession(session: RemoteEditSession): Promise<void> {
     if (session.uploadInFlight) {
         return;
@@ -3411,8 +3521,21 @@ async function syncRemoteEditSession(session: RemoteEditSession): Promise<void> 
         if (!isRemoteLoading.value && selectedServerId.value === session.serverId) {
             await loadRemoteFiles();
         }
-    } catch (error) {
+    } catch (error: any) {
         const fileName = getBaseName(session.remotePath);
+        // If the local temp file is gone or unreadable, stop polling — the session is no longer viable
+        const isFileGone = error?.code === 'ENOENT' || error?.code === 'UNKNOWN' || error?.errno === -4094 || error?.errno === -2;
+        if (isFileGone) {
+            window.clearInterval(session.pollTimerId);
+            for (const [key, s] of remoteEditSessions) {
+                if (s === session) {
+                    remoteEditSessions.delete(key);
+                    break;
+                }
+            }
+            updateActiveRemoteEditSessionCount();
+            return;
+        }
         pushTransferLog(`${t('servers.autoSyncFailed')}: ${fileName} — ${filterGenericError(error)}`, 'error');
     } finally {
         session.uploadInFlight = false;

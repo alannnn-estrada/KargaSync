@@ -20,12 +20,15 @@ const readSettings = (rows: SettingsRow[]): AppSettings => {
     const theme = settingsByKey.get('theme') ?? DEFAULT_APP_SETTINGS.theme;
     const externalEditor = settingsByKey.get('externalEditor') ?? DEFAULT_APP_SETTINGS.externalEditor;
     const customEditorPath = settingsByKey.get('customEditorPath');
+    const scanConcurrencyRaw = settingsByKey.get('scanConcurrency');
+    const scanConcurrencyParsed = scanConcurrencyRaw !== undefined ? parseInt(scanConcurrencyRaw, 10) : undefined;
 
     return {
         language: isSupportedLanguage(language) ? language : DEFAULT_APP_SETTINGS.language,
         theme: isSupportedTheme(theme) ? theme : DEFAULT_APP_SETTINGS.theme,
         externalEditor: isSupportedExternalEditor(externalEditor) ? externalEditor : DEFAULT_APP_SETTINGS.externalEditor,
         customEditorPath: customEditorPath || undefined,
+        scanConcurrency: scanConcurrencyParsed !== undefined && !isNaN(scanConcurrencyParsed) ? scanConcurrencyParsed : undefined,
     };
 };
 
@@ -55,6 +58,9 @@ export function createSettingsManager(db: SqliteDatabase): SettingsManager {
         if (settings.customEditorPath !== undefined) {
             upsertSetting.run({ key: 'customEditorPath', value: settings.customEditorPath });
         }
+        if (settings.scanConcurrency !== undefined) {
+            upsertSetting.run({ key: 'scanConcurrency', value: String(settings.scanConcurrency) });
+        }
     });
 
     const getSettings = (): AppSettings => readSettings(listSettings.all() as SettingsRow[]);
@@ -66,6 +72,7 @@ export function createSettingsManager(db: SqliteDatabase): SettingsManager {
             theme: input.theme ?? currentSettings.theme,
             externalEditor: input.externalEditor ?? currentSettings.externalEditor,
             customEditorPath: input.customEditorPath !== undefined ? input.customEditorPath : currentSettings.customEditorPath,
+            scanConcurrency: input.scanConcurrency !== undefined ? input.scanConcurrency : currentSettings.scanConcurrency,
         };
 
         persistSettings(nextSettings);
