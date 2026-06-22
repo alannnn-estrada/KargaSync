@@ -90,7 +90,7 @@ jobs:
           path: packages/
 
       - name: Install repo tools
-        run: sudo apt-get install -y dpkg-dev createrepo-c
+        run: sudo apt-get install -y dpkg-dev apt-utils createrepo-c
 
       - name: Build apt (Debian/Ubuntu) repository
         run: |
@@ -100,18 +100,18 @@ jobs:
           find packages -name "*.deb" -exec cp {} repo/apt/pool/main/ \;
 
           cd repo/apt
-          dpkg-scanpackages pool/main /dev/null > dists/stable/main/binary-amd64/Packages
+          dpkg-scanpackages pool/main > dists/stable/main/binary-amd64/Packages
           gzip -k dists/stable/main/binary-amd64/Packages
 
-          # Release metadata
-          cat > dists/stable/Release << 'EOF'
-          Origin: KargaSync
-          Label: KargaSync
-          Codename: stable
-          Architectures: amd64
-          Components: main
-          Description: KargaSync official apt repository
-          EOF
+          # Generate proper Release file with Date + SHA256 checksums
+          apt-ftparchive \
+            -o APT::FTPArchive::Release::Origin="KargaSync" \
+            -o APT::FTPArchive::Release::Label="KargaSync" \
+            -o APT::FTPArchive::Release::Codename="stable" \
+            -o APT::FTPArchive::Release::Architectures="amd64" \
+            -o APT::FTPArchive::Release::Components="main" \
+            -o APT::FTPArchive::Release::Description="KargaSync official apt repository" \
+            release dists/stable > dists/stable/Release
 
       - name: Build yum/dnf (Fedora/RHEL) repository
         run: |
