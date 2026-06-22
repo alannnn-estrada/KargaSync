@@ -4,7 +4,13 @@ import { defineConfig } from 'vite';
 export default defineConfig({
     build: {
         rollupOptions: {
-            external: ['node:sqlite'],
+            external: [
+                'node:sqlite',
+                'ssh2',
+                'ssh2-sftp-client',
+                // Prevent Rollup from trying to parse native .node binaries
+                (id: string) => id.endsWith('.node'),
+            ],
         },
     },
 });
