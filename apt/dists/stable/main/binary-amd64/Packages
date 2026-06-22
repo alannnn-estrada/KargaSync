@@ -1,0 +1,18 @@
+Package: karga-sync
+Version: 0.3.0
+Architecture: amd64
+Maintainer: Alan Estrada <alann_estrada.ksh@outlook.com>
+Installed-Size: 303576
+Depends: libgtk-3-0, libnotify4, libnss3, xdg-utils, libatspi2.0-0, libdrm2, libgbm1, libxcb-dri3-0, kde-cli-tools | kde-runtime | trash-cli | libglib2.0-bin | gvfs-bin
+Recommends: pulseaudio | libasound2
+Suggests: gir1.2-gnomekeyring-1.0, libgnome-keyring0, lsb-release
+Filename: pool/main/karga-sync_0.3.0_amd64.deb
+Size: 90019428
+MD5sum: cae5a1759793ae72af96d28f02d5827b
+SHA1: 2d1804541f5e79d55489f16f456a2c4ec2d374a4
+SHA256: 28bf7aba5ea7464f1030ef3dc25255deb20d748a7bb182a0565e6a8f8767a487
+Section: utils
+Priority: optional
+Description: My Electron application description
+ My Electron application description
+

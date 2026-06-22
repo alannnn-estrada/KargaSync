@@ -1,0 +1,6 @@
+Origin: KargaSync
+Label: KargaSync
+Codename: stable
+Architectures: amd64
+Components: main
+Description: KargaSync official apt repository
