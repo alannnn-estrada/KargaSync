@@ -8,7 +8,7 @@ A desktop app for comparing file environments between local folders and remote s
 
 ### Windows
 
-Download `KargaSync-Setup-x.x.x.exe` from [Releases](https://github.com/alann-estrada-KSH/KargaSync/releases/latest) and run the installer.
+Download `KargaSync-Setup-x.x.x.exe` from [Releases](https://github.com/alannnn-estrada/KargaSync/releases/latest) and run the installer.
 
 Updates are downloaded and applied automatically in the background.
 
@@ -16,7 +16,7 @@ Updates are downloaded and applied automatically in the background.
 
 ### macOS
 
-Download `KargaSync-darwin-x64-x.x.x.zip` from [Releases](https://github.com/alann-estrada-KSH/KargaSync/releases/latest), unzip, and move `KargaSync.app` to `/Applications`.
+Download `KargaSync-darwin-x64-x.x.x.zip` from [Releases](https://github.com/alannnn-estrada/KargaSync/releases/latest), unzip, and move `KargaSync.app` to `/Applications`.
 
 When a new version is available, the app will notify you with a link to download it.
 
@@ -31,7 +31,7 @@ Adds a repository so `apt` / `dnf` can keep the app updated automatically.
 **Debian / Ubuntu**
 
 ```bash
-echo "deb [trusted=yes] https://alann-estrada-KSH.github.io/KargaSync/apt stable main" \
+echo "deb [trusted=yes] https://alannnn-estrada.github.io/KargaSync/apt stable main" \
   | sudo tee /etc/apt/sources.list.d/kargasync.list
 sudo apt update
 sudo apt install karga-sync
@@ -41,7 +41,7 @@ sudo apt install karga-sync
 
 ```bash
 sudo curl -o /etc/yum.repos.d/kargasync.repo \
-  https://alann-estrada-KSH.github.io/KargaSync/rpm/kargasync.repo
+  https://alannnn-estrada.github.io/KargaSync/rpm/kargasync.repo
 sudo dnf install karga-sync
 ```
 
@@ -59,7 +59,7 @@ sudo dnf upgrade karga-sync
 
 ### Linux — manual download
 
-Download the `.deb` or `.rpm` package from [Releases](https://github.com/alann-estrada-KSH/KargaSync/releases/latest) and install it directly.
+Download the `.deb` or `.rpm` package from [Releases](https://github.com/alannnn-estrada/KargaSync/releases/latest) and install it directly.
 
 ```bash
 # Debian / Ubuntu

@@ -1,7 +1,7 @@
 import { autoUpdater, BrowserWindow, app, ipcMain } from 'electron';
 import { UPDATE_CHANNELS, type UpdateAvailableEvent } from '../../shared/ipc/contracts';
 
-const GITHUB_REPO = 'alann-estrada-KSH/KargaSync';
+const GITHUB_REPO = 'alannnn-estrada/KargaSync';
 
 function getMainWindow(): BrowserWindow | null {
     const wins = BrowserWindow.getAllWindows().filter(w => !w.isDestroyed());

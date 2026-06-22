@@ -18,8 +18,8 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({ setupIcon: 'src/assets/icons/icon.ico' }),
     new MakerZIP({}, ['darwin']),
-    new MakerRpm({ options: { icon: 'src/assets/icons/512x512.png', bin: 'karga-sync' } }),
-    new MakerDeb({ options: { icon: 'src/assets/icons/512x512.png', bin: 'karga-sync' } }),
+    new MakerRpm({ options: { icon: 'src/assets/icons/512x512.png', bin: 'karga-sync', executableArgs: ['--no-sandbox'] } }),
+    new MakerDeb({ options: { icon: 'src/assets/icons/512x512.png', bin: 'karga-sync', executableArgs: ['--no-sandbox'] } }),
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
