@@ -2,15 +2,15 @@ Package: karga-sync
 Version: 0.3.4
 Architecture: amd64
 Maintainer: Alan Estrada <alann_estrada.ksh@outlook.com>
-Installed-Size: 303677
+Installed-Size: 304008
 Depends: libgtk-3-0, libnotify4, libnss3, xdg-utils, libatspi2.0-0, libdrm2, libgbm1, libxcb-dri3-0, kde-cli-tools | kde-runtime | trash-cli | libglib2.0-bin | gvfs-bin
 Recommends: pulseaudio | libasound2
 Suggests: gir1.2-gnomekeyring-1.0, libgnome-keyring0, lsb-release
 Filename: pool/main/karga-sync_0.3.4_amd64.deb
-Size: 90043052
-MD5sum: 3b27cd0bb4e458646f6fb98044dab523
-SHA1: e0dcd301bc702dcf511763d09d2ef69248e5ac1c
-SHA256: c919985a41785653439849dbe5b38b4a41e780b7791d2f7e78d5d7a668419b43
+Size: 90125174
+MD5sum: 37904fab10c2268a11daeceb9275c6c3
+SHA1: 7e3bb2735f1c2326c305c9688a3dd11ff1e6252f
+SHA256: 02d9414ff9f83e490c0bd2a51b234a274a058389e2faccb486019f394eec57b0
 Section: utils
 Priority: optional
 Description: Compare file environments between local folders and remote servers via SFTP/FTP.
