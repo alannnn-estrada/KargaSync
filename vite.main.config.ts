@@ -6,8 +6,8 @@ export default defineConfig({
         rollupOptions: {
             external: [
                 'node:sqlite',
-                'ssh2',
                 // Prevent Rollup from trying to parse native .node binaries
+                // ssh2 catches the load failure and falls back to pure-JS crypto
                 (id: string) => id.endsWith('.node'),
             ],
         },
