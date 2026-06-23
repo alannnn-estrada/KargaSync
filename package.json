@@ -1,7 +1,7 @@
 {
   "name": "karga-sync",
   "productName": "KargaSync",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Compare file environments between local folders and remote servers via SFTP/FTP.",
   "main": ".vite/build/main.js",
   "private": true,
