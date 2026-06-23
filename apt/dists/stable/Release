@@ -1,23 +1,23 @@
 Architectures: amd64
 Codename: stable
 Components: main
-Date: Mon, 22 Jun 2026 22:11:58 +0000
+Date: Tue, 23 Jun 2026 00:33:13 +0000
 Description: KargaSync official apt repository
 Label: KargaSync
 Origin: KargaSync
 MD5Sum:
- 3ad3d19d79dcf3d3f969e64fb587aafa              175 Release
- 032b4bc3a8f9bc4bbde50fa108b3a717              840 main/binary-amd64/Packages
- 68dd0c61b24044761c2e6b3753e442c6              541 main/binary-amd64/Packages.gz
+ fe9872866bc3c04fd9d4de1bcb3d3e69              175 Release
+ 819c862c0c7df2db5e2825bab70b6828              840 main/binary-amd64/Packages
+ 6b95ddd439514ee197c773e7706822ee              540 main/binary-amd64/Packages.gz
 SHA1:
- 559717f7a95c4cf80d5d0b8b4f4cb0d2bfb4bf0c              175 Release
- 8799a6432f770a3285dbaf355d7a9b61baeeb622              840 main/binary-amd64/Packages
- e5fb5a51b8de7891ee00e6a0906258fde1e0ce73              541 main/binary-amd64/Packages.gz
+ 1f0c9cf3a5bd43e753d634d9c2b4b7f4a22e2c52              175 Release
+ f71d5feadcb9fba4d6d96cec544f9a6702501732              840 main/binary-amd64/Packages
+ c57537c50db90657bb4ec11c3fad4255995bba1a              540 main/binary-amd64/Packages.gz
 SHA256:
- 54cc4482706d07aa569e53d33eeb33d6383482c9d37e0ba32667d895b6c5c53d              175 Release
- 201d401365e460678d68a6e9f7b13d0d598c4fad4b67d5c778a272b4a1b55c97              840 main/binary-amd64/Packages
- dcee9f752875bdb3c3b015b0a6846aa976539e99695c1454ae6de7e88c10cba5              541 main/binary-amd64/Packages.gz
+ a18e1c4036df93f8459999edebe349d8cfbb169a2159afb03594d03438f5dff1              175 Release
+ 27feae7f8ebfe72b356d83427944ff7db4e7df2e43936213a04a8d994df46292              840 main/binary-amd64/Packages
+ ea8976db2ea9b38e91fad507a628e397b1118904e883f35b5a134c51d573b76d              540 main/binary-amd64/Packages.gz
 SHA512:
- 78bb0dff8364844c45cedfaca3f152bc2ebdb9c2a52fa82dea6a0634ed989c2e6a65ad83db3959dd3510babee8b7dd7f47bb31df7b83c78bdb2e0edafd24794a              175 Release
- 62a4a4ee5a50cb011a2cea75e8065e311ea3525b811a0cb0aba171c907bbcbfdc92f3fb2c3793a4c937cad31fe6bb921bd10cb7d44226c8790a1e88d05e08a7c              840 main/binary-amd64/Packages
- e1c83e6bd7ddc0fc501779b486a4e47e4c9f09c3b88ef4176558f3828499e201c4ba460710228ae07950b6fbfa735fe1847792fb8bdfc913abb8bb48e8530e5f              541 main/binary-amd64/Packages.gz
+ 2ad8d3b173080e58d8732005ae9cb7a731d8d06015065d17f1b905f080f0d42d9f7a43a6b62619430294f4b5e470d2d4f2afbdd6b53560de1e40d3beb91862d6              175 Release
+ 9cf06bcd78959e03949a5537479301f89970c7a3a0b9a3bf1d3e551d87ca9a62f7bb21e2ca06eec87ad2d040f8a1f7ddada6c05ff362e3b1d5f337ec9596197f              840 main/binary-amd64/Packages
+ aef4f3f64a8936776c831379bb23880e616161a8828e37ac903b04a73c112edcd68e2e5d6fd9aafeaf127fa4c7f48885517a60fd3bcabe038e8ffdca16b00586              540 main/binary-amd64/Packages.gz
