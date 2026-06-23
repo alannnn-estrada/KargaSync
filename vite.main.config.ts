@@ -1,13 +1,19 @@
 import { defineConfig } from 'vite';
 
-// Intercept .node binary requires BEFORE @rollup/plugin-commonjs tries to parse them.
-// ssh2 wraps sshcrypto.node in try/catch and falls back to pure-JS crypto when not found.
+// Stub out .node native binaries at build time so they never produce broken
+// runtime requires. ssh2/cpu-features gracefully degrade to pure-JS fallbacks
+// when their native bindings return {}.
 const nativeNodePlugin = {
     name: 'native-node',
     enforce: 'pre' as const,
     resolveId(id: string) {
         if (id.endsWith('.node')) {
-            return { id, external: true };
+            return '\0native-node-stub';
+        }
+    },
+    load(id: string) {
+        if (id === '\0native-node-stub') {
+            return 'module.exports = {};';
         }
     },
 };

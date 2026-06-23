@@ -57,7 +57,7 @@ export const useChangelogStore = defineStore('changelog', () => {
 
         if (latestEntry.value && seenVersion !== latestEntry.value.version) {
             hasUnreadLatest.value = true;
-            isModalOpen.value = true;
+            openModal();
         }
 
         hasInitialized.value = true;
