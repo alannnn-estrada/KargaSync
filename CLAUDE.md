@@ -228,3 +228,9 @@ Restore loop created `mkdtemp` temp dirs but only cleaned the file inside, never
 
 ### versionsRollback null local_path guard — FIXED
 `version_files.local_path` is `TEXT` (not NOT NULL in schema). Calling `path.basename(null)` throws synchronously before the try block, aborting the whole rollback. Fix: `if (!fileRow.local_path) continue;` before building `tmpPath`.
+
+### Release version mismatch — package.json must match git tag
+`electron-forge` names installers and install dirs from `package.json` `"version"`, NOT from the git tag. If you push tag `v0.3.3` but `package.json` says `0.3.1`, installers say `0.3.1` and the app installs to `app-0.3.1/`. Users can't tell which build they have. Rule: always bump `package.json` version to match the release tag BEFORE tagging.
+
+### asar + ssh2 native module causes Cannot find module — FIXED
+`AutoUnpackNativesPlugin` + manual `asar.unpack` glob can produce an invalid combined glob (they concatenate with comma, not brace expansion) → nothing gets unpacked → `ssh2` native binary stays inside asar → Electron can't load native code from asar → crash. Additionally `ssh2-sftp-client` was externalized in Vite config causing `Cannot find module 'ssh2-sftp-client'` at startup (module not in package). Fixes: (1) bundle `ssh2-sftp-client` via Vite (remove from externals — it's pure JS); (2) set `asar: false` + `OnlyLoadAppFromAsar: false` + `EnableEmbeddedAsarIntegrityValidation: false` in forge config — no asar means flat file layout, module resolution works identical to dev.
